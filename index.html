@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Smoke With Me">
+    <meta name="theme-color" content="#1a1a2e">
+    <title>Smoke With Me</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+        }
+
+        .container {
+            text-align: center;
+            padding: 1.5rem;
+            max-width: 100%;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .header {
+            padding-top: env(safe-area-inset-top);
+        }
+
+        .title {
+            font-size: 1.8rem;
+            margin-bottom: 0.3rem;
+            font-weight: 300;
+            letter-spacing: 3px;
+        }
+
+        .subtitle {
+            color: #888;
+            font-size: 0.85rem;
+            margin-bottom: 1rem;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .cigarette-container {
+            position: relative;
+            height: 250px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 2rem;
+            width: 100%;
+        }
+
+        .cigarette-wrapper {
+            position: relative;
+            transform: rotate(-5deg);
+        }
+
+        .cigarette {
+            position: relative;
+            width: 220px;
+            height: 14px;
+            background: linear-gradient(to right, #f5f5dc 0%, #e8e8d0 100%);
+            border-radius: 7px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            overflow: visible;
+        }
+
+        .filter {
+            position: absolute;
+            right: 0;
+            width: 35px;
+            height: 100%;
+            background: linear-gradient(to right, #d4a574, #c19a6b);
+            border-left: 1px solid #a0826d;
+            border-radius: 0 7px 7px 0;
+        }
+
+        .filter::after {
+            content: '';
+            position: absolute;
+            left: 5px;
+            top: 20%;
+            width: 1px;
+            height: 60%;
+            background: rgba(160, 130, 109, 0.3);
+        }
+
+        .burn-line {
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            background: linear-gradient(to right, 
+                transparent 0%,
+                rgba(255, 100, 0, 0.2) 30%,
+                rgba(139, 69, 19, 0.6) 60%,
+                #3a3a3a 85%,
+                #1a1a1a 100%
+            );
+            transition: width 0.5s ease-out;
+            border-radius: 7px 0 0 7px;
+        }
+
+        .ember {
+            position: absolute;
+            right: -4px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 10px;
+            height: 10px;
+            background: radial-gradient(circle, #ff6b00 0%, #ff4500 50%, transparent 70%);
+            border-radius: 50%;
+            box-shadow: 0 0 25px #ff4500, 0 0 50px rgba(255, 69, 0, 0.6);
+            animation: ember-glow 2s ease-in-out infinite;
+        }
+
+        @keyframes ember-glow {
+            0%, 100% { 
+                opacity: 0.9;
+                transform: translateY(-50%) scale(1);
+                box-shadow: 0 0 25px #ff4500, 0 0 50px rgba(255, 69, 0, 0.6);
+            }
+            50% { 
+                opacity: 1;
+                transform: translateY(-50%) scale(1.15);
+                box-shadow: 0 0 35px #ff4500, 0 0 70px rgba(255, 69, 0, 0.8);
+            }
+        }
+
+        .smoke-container {
+            position: absolute;
+            left: -20px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 60px;
+            height: 80px;
+            pointer-events: none;
+        }
+
+        .smoke {
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 30px;
+            height: 30px;
+            opacity: 0;
+            animation: smoke-rise 4s ease-out infinite;
+        }
+
+        .smoke:nth-child(2) {
+            animation-delay: 1.3s;
+        }
+
+        .smoke:nth-child(3) {
+            animation-delay: 2.6s;
+        }
+
+        @keyframes smoke-rise {
+            0% {
+                transform: translateY(0) translateX(0) scale(0.4);
+                opacity: 0.7;
+            }
+            50% {
+                opacity: 0.4;
+            }
+            100% {
+                transform: translateY(-80px) translateX(25px) scale(1.2);
+                opacity: 0;
+            }
+        }
+
+        .smoke::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(220, 220, 220, 0.5) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .status {
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 16px;
+            padding: 1.2rem;
+            margin-bottom: 1.5rem;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            width: 100%;
+            max-width: 350px;
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.9rem;
+            font-size: 0.95rem;
+        }
+
+        .status-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .status-label {
+            color: #999;
+            font-size: 0.9rem;
+        }
+
+        .status-value {
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .progress {
+            color: #4CAF50;
+            font-size: 1.1rem;
+        }
+
+        .connection-status {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4CAF50;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .connection-status.disconnected {
+            background: #ff4444;
+            animation: none;
+        }
+
+        .connection-status.connecting {
+            background: #ffa500;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        .controls {
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 0.8rem;
+            justify-content: center;
+            margin-bottom: 1rem;
+        }
+
+        button {
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            flex: 1;
+            max-width: 160px;
+        }
+
+        .start-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .start-btn:active {
+            transform: scale(0.96);
+        }
+
+        .start-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .reset-btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .reset-btn:active {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .share-section {
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 12px;
+            padding: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .share-label {
+            font-size: 0.85rem;
+            color: #999;
+            margin-bottom: 0.5rem;
+        }
+
+        .code {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(255, 255, 255, 0.12);
+            padding: 0.7rem 1.2rem;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 3px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .code:active {
+            background: rgba(255, 255, 255, 0.18);
+            transform: scale(0.98);
+        }
+
+        .copy-icon {
+            font-size: 1rem;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        .partner-info {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 0.5rem;
+        }
+
+        @media (max-width: 380px) {
+            .title {
+                font-size: 1.5rem;
+            }
+            
+            .cigarette {
+                width: 180px;
+            }
+            
+            button {
+                padding: 0.8rem 1.5rem;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="title">SMOKE WITH ME</h1>
+            <p class="subtitle">Share a moment together</p>
+        </div>
+
+        <div class="main-content">
+            <div class="cigarette-container">
+                <div class="cigarette-wrapper">
+                    <div class="cigarette">
+                        <div class="filter"></div>
+                        <div class="burn-line" id="burnLine">
+                            <div class="ember" id="ember"></div>
+                            <div class="smoke-container">
+                                <div class="smoke"></div>
+                                <div class="smoke"></div>
+                                <div class="smoke"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="status">
+                <div class="status-item">
+                    <span class="status-label">Connection</span>
+                    <span class="status-value">
+                        <span class="connection-status" id="connectionDot"></span>
+                        <span id="connectionStatus">Connecting...</span>
+                    </span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Progress</span>
+                    <span class="status-value progress" id="progress">0%</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Time Left</span>
+                    <span class="status-value" id="timeRemaining">5:00</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="btn-group">
+                <button class="start-btn" id="startBtn">Light Up</button>
+                <button class="reset-btn" id="resetBtn">Reset</button>
+            </div>
+
+            <div class="share-section">
+                <div class="share-label">Share with your person:</div>
+                <div class="code" id="roomCode" onclick="copyCode()">
+                    <span id="codeText">LOADING</span>
+                    <span class="copy-icon">📋</span>
+                </div>
+                <div class="partner-info" id="partnerInfo"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast">Link copied to clipboard!</div>
+
+    <script>
+        // Service Worker Registration
+        if ('serviceWorker' in navigator && window.location.protocol !== 'about:') {
+            navigator.serviceWorker.register('sw.js').catch(err => {
+                // Service worker not available in preview, will work when deployed
+            });
+        }
+
+        const DURATION = 5 * 60 * 1000; // 5 minutes
+        let startTime = null;
+        let animationFrame = null;
+        let roomId = null;
+        let syncInterval = null;
+        let lastSyncedProgress = 0;
+        let myReadyState = false;
+        let partnerReadyState = false;
+
+        // Generate or get room ID from URL
+        function getRoomId() {
+            const params = new URLSearchParams(window.location.search);
+            if (params.has('room')) {
+                return params.get('room');
+            }
+            return Math.random().toString(36).substring(2, 8).toUpperCase();
+        }
+
+        roomId = getRoomId();
+        updateRoomCode();
+
+        // Update URL without reload (only if not in iframe/preview)
+        try {
+            if (window.location.protocol !== 'about:') {
+                const newUrl = new URL(window.location);
+                newUrl.searchParams.set('room', roomId);
+                window.history.replaceState({}, '', newUrl);
+            }
+        } catch (e) {
+            // Can't modify history in preview environment, that's ok
+        }
+
+        // Storage key for this room
+        const storageKey = `smoke-${roomId}`;
+
+        async function syncState() {
+            try {
+                const state = await window.storage.get(storageKey, true);
+                if (state) {
+                    const data = JSON.parse(state.value);
+                    
+                    // Check if partner is ready
+                    if (data.participant1Ready !== undefined || data.participant2Ready !== undefined) {
+                        // Determine which participant we are
+                        if (!myReadyState && (data.participant1Ready === false || data.participant1Ready === undefined)) {
+                            // We're participant 1
+                            partnerReadyState = data.participant2Ready || false;
+                        } else if (!myReadyState && data.participant1Ready === true) {
+                            // We're participant 2
+                            partnerReadyState = data.participant1Ready || false;
+                        } else if (myReadyState) {
+                            // We're already ready, check partner
+                            if (data.participant1Ready && data.participant2Ready) {
+                                partnerReadyState = true;
+                            }
+                        }
+                    }
+                    
+                    // Start smoking only if both are ready
+                    if (data.participant1Ready && data.participant2Ready && data.startTime && !startTime) {
+                        startTime = data.startTime;
+                        document.getElementById('startBtn').textContent = 'Smoking...';
+                        document.getElementById('startBtn').disabled = true;
+                        updateCigarette();
+                        updateConnectionStatus('smoking', 2);
+                    } else if (data.participant1Ready || data.participant2Ready) {
+                        // At least one person is ready
+                        const readyCount = (data.participant1Ready ? 1 : 0) + (data.participant2Ready ? 1 : 0);
+                        updateConnectionStatus('waiting', readyCount);
+                    } else {
+                        updateConnectionStatus('connected', 1);
+                    }
+                } else {
+                    updateConnectionStatus('waiting', 0);
+                }
+            } catch (error) {
+                updateConnectionStatus('waiting', 0);
+            }
+        }
+
+        async function startSmoking() {
+            myReadyState = true;
+            
+            try {
+                // Get current state
+                let currentState = null;
+                try {
+                    const state = await window.storage.get(storageKey, true);
+                    if (state) {
+                        currentState = JSON.parse(state.value);
+                    }
+                } catch (e) {
+                    // No state yet
+                }
+                
+                // Determine if we're participant 1 or 2
+                let isParticipant1 = !currentState || !currentState.participant1Ready;
+                
+                let newState = currentState || {
+                    roomId: roomId,
+                    participant1Ready: false,
+                    participant2Ready: false
+                };
+                
+                if (isParticipant1) {
+                    newState.participant1Ready = true;
+                } else {
+                    newState.participant2Ready = true;
+                }
+                
+                // Check if both are ready
+                if (newState.participant1Ready && newState.participant2Ready) {
+                    // Both ready! Start smoking
+                    newState.startTime = Date.now();
+                    startTime = newState.startTime;
+                    document.getElementById('startBtn').textContent = 'Smoking...';
+                    document.getElementById('startBtn').disabled = true;
+                    updateCigarette();
+                } else {
+                    // Waiting for partner
+                    document.getElementById('startBtn').textContent = 'Ready ✓';
+                    document.getElementById('startBtn').disabled = true;
+                }
+                
+                await window.storage.set(storageKey, JSON.stringify(newState), true);
+                
+            } catch (error) {
+                console.error('Failed to sync:', error);
+                showToast('Connection error. Try again.');
+            }
+        }
+
+        function updateCigarette() {
+            if (!startTime) return;
+
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / DURATION, 1);
+            const burnWidth = progress * 185; // Max burn width (cigarette - filter)
+
+            const burnLine = document.getElementById('burnLine');
+            const ember = document.getElementById('ember');
+            
+            burnLine.style.width = burnWidth + 'px';
+            
+            // Hide ember and smoke when finished
+            if (progress >= 1) {
+                ember.style.display = 'none';
+            } else {
+                ember.style.display = 'block';
+            }
+
+            document.getElementById('progress').textContent = Math.round(progress * 100) + '%';
+
+            const remainingMs = Math.max(DURATION - elapsed, 0);
+            const minutes = Math.floor(remainingMs / 60000);
+            const seconds = Math.floor((remainingMs % 60000) / 1000);
+            document.getElementById('timeRemaining').textContent = 
+                `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+            if (progress < 1) {
+                animationFrame = requestAnimationFrame(updateCigarette);
+            } else {
+                document.getElementById('timeRemaining').textContent = 'Done ✓';
+            }
+        }
+
+        async function reset() {
+            startTime = null;
+            myReadyState = false;
+            partnerReadyState = false;
+            
+            if (animationFrame) {
+                cancelAnimationFrame(animationFrame);
+            }
+            
+            try {
+                await window.storage.delete(storageKey, true);
+            } catch (error) {
+                // Key might not exist
+            }
+            
+            const burnLine = document.getElementById('burnLine');
+            burnLine.style.width = '0px';
+            document.getElementById('ember').style.display = 'block';
+            document.getElementById('progress').textContent = '0%';
+            document.getElementById('timeRemaining').textContent = '5:00';
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('startBtn').textContent = 'Light Up';
+            
+            updateConnectionStatus('waiting', 0);
+        }
+
+        function updateConnectionStatus(status, participants = 0) {
+            const dot = document.getElementById('connectionDot');
+            const statusText = document.getElementById('connectionStatus');
+            const partnerInfo = document.getElementById('partnerInfo');
+            
+            dot.className = 'connection-status';
+            
+            switch(status) {
+                case 'smoking':
+                    statusText.textContent = 'Smoking Together';
+                    partnerInfo.textContent = 'Both smoking ✓';
+                    break;
+                case 'waiting':
+                    if (participants === 0) {
+                        dot.classList.add('disconnected');
+                        statusText.textContent = 'Waiting';
+                        partnerInfo.textContent = 'Share the link to connect';
+                    } else if (participants === 1) {
+                        dot.classList.add('connecting');
+                        statusText.textContent = 'Waiting to Smoke';
+                        partnerInfo.textContent = 'Waiting for your person to light up...';
+                    } else if (participants === 2) {
+                        statusText.textContent = 'Both Ready';
+                        partnerInfo.textContent = 'Starting...';
+                    }
+                    break;
+                case 'connected':
+                    statusText.textContent = 'Connected';
+                    partnerInfo.textContent = 'Ready when you are';
+                    break;
+                case 'connecting':
+                    dot.classList.add('connecting');
+                    statusText.textContent = 'Connecting';
+                    partnerInfo.textContent = '';
+                    break;
+            }
+        }
+
+        function updateRoomCode() {
+            document.getElementById('codeText').textContent = roomId;
+        }
+
+        function copyCode() {
+            const url = window.location.href;
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Smoke With Me',
+                    text: 'Join me for a smoke break',
+                    url: url
+                }).catch(() => {
+                    // Fallback to clipboard
+                    copyToClipboard(url);
+                });
+            } else {
+                copyToClipboard(url);
+            }
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('Link copied! Send it to your person.');
+            }).catch(() => {
+                showToast('Tap and hold to copy the link');
+            });
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Event listeners
+        document.getElementById('startBtn').addEventListener('click', startSmoking);
+        document.getElementById('resetBtn').addEventListener('click', reset);
+
+        // Sync every 1 second
+        syncInterval = setInterval(syncState, 1000);
+        syncState();
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (syncInterval) clearInterval(syncInterval);
+            if (animationFrame) cancelAnimationFrame(animationFrame);
+        });
+
+        // Prevent pull-to-refresh on mobile
+        document.body.addEventListener('touchmove', (e) => {
+            if (e.touches.length > 1) return;
+            e.preventDefault();
+        }, { passive: false });
+    </script>
+</body>
+</html>
