@@ -118,7 +118,7 @@
             left: 0;
             top: 0;
             height: 100%;
-            background: linear-gradient(to right, 
+            background: linear-gradient(to right,
                 transparent 0%,
                 rgba(255, 100, 0, 0.2) 30%,
                 rgba(139, 69, 19, 0.6) 60%,
@@ -143,12 +143,12 @@
         }
 
         @keyframes ember-glow {
-            0%, 100% { 
+            0%, 100% {
                 opacity: 0.9;
                 transform: translateY(-50%) scale(1);
                 box-shadow: 0 0 25px #ff4500, 0 0 50px rgba(255, 69, 0, 0.6);
             }
-            50% { 
+            50% {
                 opacity: 1;
                 transform: translateY(-50%) scale(1.15);
                 box-shadow: 0 0 35px #ff4500, 0 0 70px rgba(255, 69, 0, 0.8);
@@ -385,11 +385,11 @@
             .title {
                 font-size: 1.5rem;
             }
-            
+
             .cigarette {
                 width: 180px;
             }
-            
+
             button {
                 padding: 0.8rem 1.5rem;
                 font-size: 0.9rem;
@@ -459,11 +459,50 @@
 
     <div class="toast" id="toast">Link copied to clipboard!</div>
 
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
     <script>
+        // ===========================================
+        // FIREBASE CONFIGURATION
+        // ===========================================
+        // To make this app work, you need to:
+        // 1. Go to https://console.firebase.google.com/
+        // 2. Create a new project (or use existing)
+        // 3. Go to Project Settings > General > Your apps
+        // 4. Click "Add app" > Web
+        // 5. Copy the config values below
+        // 6. Go to Realtime Database > Create Database
+        // 7. Set rules to: { "rules": { ".read": true, ".write": true } }
+        //    (For production, use more restrictive rules)
+        // ===========================================
+
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT.firebaseapp.com",
+            databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
+            projectId: "YOUR_PROJECT",
+            storageBucket: "YOUR_PROJECT.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        // Check if Firebase is configured
+        const isFirebaseConfigured = firebaseConfig.apiKey !== "YOUR_API_KEY";
+
+        let db = null;
+        let roomRef = null;
+
+        if (isFirebaseConfigured) {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.database();
+        }
+
         // Service Worker Registration
         if ('serviceWorker' in navigator && window.location.protocol !== 'about:') {
             navigator.serviceWorker.register('sw.js').catch(err => {
-                // Service worker not available in preview, will work when deployed
+                // Service worker not available in preview
             });
         }
 
@@ -471,10 +510,13 @@
         let startTime = null;
         let animationFrame = null;
         let roomId = null;
-        let syncInterval = null;
-        let lastSyncedProgress = 0;
+        let myId = null;
         let myReadyState = false;
-        let partnerReadyState = false;
+
+        // Generate unique ID for this user session
+        function generateUserId() {
+            return Math.random().toString(36).substring(2, 10);
+        }
 
         // Generate or get room ID from URL
         function getRoomId() {
@@ -486,9 +528,10 @@
         }
 
         roomId = getRoomId();
+        myId = generateUserId();
         updateRoomCode();
 
-        // Update URL without reload (only if not in iframe/preview)
+        // Update URL without reload
         try {
             if (window.location.protocol !== 'about:') {
                 const newUrl = new URL(window.location);
@@ -496,107 +539,69 @@
                 window.history.replaceState({}, '', newUrl);
             }
         } catch (e) {
-            // Can't modify history in preview environment, that's ok
+            // Can't modify history in preview environment
         }
 
-        // Storage key for this room
-        const storageKey = `smoke-${roomId}`;
-
-        async function syncState() {
-            try {
-                const state = await window.storage.get(storageKey, true);
-                if (state) {
-                    const data = JSON.parse(state.value);
-                    
-                    // Check if partner is ready
-                    if (data.participant1Ready !== undefined || data.participant2Ready !== undefined) {
-                        // Determine which participant we are
-                        if (!myReadyState && (data.participant1Ready === false || data.participant1Ready === undefined)) {
-                            // We're participant 1
-                            partnerReadyState = data.participant2Ready || false;
-                        } else if (!myReadyState && data.participant1Ready === true) {
-                            // We're participant 2
-                            partnerReadyState = data.participant1Ready || false;
-                        } else if (myReadyState) {
-                            // We're already ready, check partner
-                            if (data.participant1Ready && data.participant2Ready) {
-                                partnerReadyState = true;
-                            }
-                        }
-                    }
-                    
-                    // Start smoking only if both are ready
-                    if (data.participant1Ready && data.participant2Ready && data.startTime && !startTime) {
-                        startTime = data.startTime;
-                        document.getElementById('startBtn').textContent = 'Smoking...';
-                        document.getElementById('startBtn').disabled = true;
-                        updateCigarette();
-                        updateConnectionStatus('smoking', 2);
-                    } else if (data.participant1Ready || data.participant2Ready) {
-                        // At least one person is ready
-                        const readyCount = (data.participant1Ready ? 1 : 0) + (data.participant2Ready ? 1 : 0);
-                        updateConnectionStatus('waiting', readyCount);
-                    } else {
-                        updateConnectionStatus('connected', 1);
-                    }
-                } else {
-                    updateConnectionStatus('waiting', 0);
-                }
-            } catch (error) {
-                updateConnectionStatus('waiting', 0);
+        // Initialize Firebase listener
+        function initFirebase() {
+            if (!isFirebaseConfigured) {
+                updateConnectionStatus('disconnected');
+                showToast('Firebase not configured. See setup instructions.');
+                return;
             }
-        }
 
-        async function startSmoking() {
-            myReadyState = true;
-            
-            try {
-                // Get current state
-                let currentState = null;
-                try {
-                    const state = await window.storage.get(storageKey, true);
-                    if (state) {
-                        currentState = JSON.parse(state.value);
-                    }
-                } catch (e) {
-                    // No state yet
+            roomRef = db.ref('rooms/' + roomId);
+
+            // Listen for changes
+            roomRef.on('value', (snapshot) => {
+                const data = snapshot.val();
+
+                if (!data) {
+                    updateConnectionStatus('waiting', 0);
+                    return;
                 }
-                
-                // Determine if we're participant 1 or 2
-                let isParticipant1 = !currentState || !currentState.participant1Ready;
-                
-                let newState = currentState || {
-                    roomId: roomId,
-                    participant1Ready: false,
-                    participant2Ready: false
-                };
-                
-                if (isParticipant1) {
-                    newState.participant1Ready = true;
-                } else {
-                    newState.participant2Ready = true;
-                }
-                
-                // Check if both are ready
-                if (newState.participant1Ready && newState.participant2Ready) {
-                    // Both ready! Start smoking
-                    newState.startTime = Date.now();
-                    startTime = newState.startTime;
+
+                // Count ready participants
+                const participants = data.participants || {};
+                const readyParticipants = Object.values(participants).filter(p => p.ready);
+                const readyCount = readyParticipants.length;
+
+                // Check if smoking has started
+                if (data.startTime && !startTime) {
+                    startTime = data.startTime;
                     document.getElementById('startBtn').textContent = 'Smoking...';
                     document.getElementById('startBtn').disabled = true;
                     updateCigarette();
-                } else {
-                    // Waiting for partner
-                    document.getElementById('startBtn').textContent = 'Ready ✓';
-                    document.getElementById('startBtn').disabled = true;
+                    updateConnectionStatus('smoking', readyCount);
+                } else if (readyCount >= 2 && !data.startTime) {
+                    // Both ready, start smoking!
+                    roomRef.update({ startTime: Date.now() });
+                } else if (readyCount === 1) {
+                    updateConnectionStatus('waiting', 1);
+                } else if (readyCount === 0) {
+                    updateConnectionStatus('waiting', 0);
                 }
-                
-                await window.storage.set(storageKey, JSON.stringify(newState), true);
-                
-            } catch (error) {
-                console.error('Failed to sync:', error);
-                showToast('Connection error. Try again.');
+            });
+
+            updateConnectionStatus('connected');
+        }
+
+        async function startSmoking() {
+            if (!isFirebaseConfigured) {
+                showToast('Firebase not configured');
+                return;
             }
+
+            myReadyState = true;
+
+            // Mark this user as ready
+            await roomRef.child('participants').child(myId).set({
+                ready: true,
+                joinedAt: Date.now()
+            });
+
+            document.getElementById('startBtn').textContent = 'Ready ✓';
+            document.getElementById('startBtn').disabled = true;
         }
 
         function updateCigarette() {
@@ -608,9 +613,9 @@
 
             const burnLine = document.getElementById('burnLine');
             const ember = document.getElementById('ember');
-            
+
             burnLine.style.width = burnWidth + 'px';
-            
+
             // Hide ember and smoke when finished
             if (progress >= 1) {
                 ember.style.display = 'none';
@@ -623,31 +628,30 @@
             const remainingMs = Math.max(DURATION - elapsed, 0);
             const minutes = Math.floor(remainingMs / 60000);
             const seconds = Math.floor((remainingMs % 60000) / 1000);
-            document.getElementById('timeRemaining').textContent = 
+            document.getElementById('timeRemaining').textContent =
                 `${minutes}:${seconds.toString().padStart(2, '0')}`;
 
             if (progress < 1) {
                 animationFrame = requestAnimationFrame(updateCigarette);
             } else {
                 document.getElementById('timeRemaining').textContent = 'Done ✓';
+                updateConnectionStatus('done');
             }
         }
 
         async function reset() {
             startTime = null;
             myReadyState = false;
-            partnerReadyState = false;
-            
+
             if (animationFrame) {
                 cancelAnimationFrame(animationFrame);
             }
-            
-            try {
-                await window.storage.delete(storageKey, true);
-            } catch (error) {
-                // Key might not exist
+
+            // Clear Firebase data for this room
+            if (isFirebaseConfigured && roomRef) {
+                await roomRef.remove();
             }
-            
+
             const burnLine = document.getElementById('burnLine');
             burnLine.style.width = '0px';
             document.getElementById('ember').style.display = 'block';
@@ -655,7 +659,7 @@
             document.getElementById('timeRemaining').textContent = '5:00';
             document.getElementById('startBtn').disabled = false;
             document.getElementById('startBtn').textContent = 'Light Up';
-            
+
             updateConnectionStatus('waiting', 0);
         }
 
@@ -663,36 +667,37 @@
             const dot = document.getElementById('connectionDot');
             const statusText = document.getElementById('connectionStatus');
             const partnerInfo = document.getElementById('partnerInfo');
-            
+
             dot.className = 'connection-status';
-            
+
             switch(status) {
                 case 'smoking':
                     statusText.textContent = 'Smoking Together';
                     partnerInfo.textContent = 'Both smoking ✓';
                     break;
+                case 'done':
+                    statusText.textContent = 'Finished';
+                    partnerInfo.textContent = 'Until next time ✓';
+                    break;
                 case 'waiting':
                     if (participants === 0) {
-                        dot.classList.add('disconnected');
+                        dot.classList.add('connecting');
                         statusText.textContent = 'Waiting';
                         partnerInfo.textContent = 'Share the link to connect';
                     } else if (participants === 1) {
                         dot.classList.add('connecting');
                         statusText.textContent = 'Waiting to Smoke';
                         partnerInfo.textContent = 'Waiting for your person to light up...';
-                    } else if (participants === 2) {
-                        statusText.textContent = 'Both Ready';
-                        partnerInfo.textContent = 'Starting...';
                     }
                     break;
                 case 'connected':
                     statusText.textContent = 'Connected';
                     partnerInfo.textContent = 'Ready when you are';
                     break;
-                case 'connecting':
-                    dot.classList.add('connecting');
-                    statusText.textContent = 'Connecting';
-                    partnerInfo.textContent = '';
+                case 'disconnected':
+                    dot.classList.add('disconnected');
+                    statusText.textContent = 'Not Connected';
+                    partnerInfo.textContent = 'Firebase setup required';
                     break;
             }
         }
@@ -703,14 +708,13 @@
 
         function copyCode() {
             const url = window.location.href;
-            
+
             if (navigator.share) {
                 navigator.share({
                     title: 'Smoke With Me',
                     text: 'Join me for a smoke break',
                     url: url
                 }).catch(() => {
-                    // Fallback to clipboard
                     copyToClipboard(url);
                 });
             } else {
@@ -739,13 +743,11 @@
         document.getElementById('startBtn').addEventListener('click', startSmoking);
         document.getElementById('resetBtn').addEventListener('click', reset);
 
-        // Sync every 1 second
-        syncInterval = setInterval(syncState, 1000);
-        syncState();
+        // Initialize
+        initFirebase();
 
         // Cleanup on page unload
         window.addEventListener('beforeunload', () => {
-            if (syncInterval) clearInterval(syncInterval);
             if (animationFrame) cancelAnimationFrame(animationFrame);
         });
 
