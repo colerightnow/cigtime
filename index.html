@@ -936,7 +936,7 @@
 <body>
     <!-- Auth Screen -->
     <div class="screen active" id="authScreen">
-        <div class="auth-logo">üö¨</div>
+        <div class="auth-logo">&#x1F6AC;</div>
         <h1 class="auth-title">SMOKE WITH ME</h1>
         <p class="auth-subtitle">Share a moment together</p>
         <button class="google-btn" id="googleSignIn">
@@ -952,7 +952,7 @@
                 <div class="user-avatar" id="userAvatar">?</div>
                 <span class="user-name" id="userName">Loading...</span>
             </div>
-            <button class="settings-btn" id="settingsBtn">‚öôÔ∏è</button>
+            <button class="settings-btn" id="settingsBtn">&#x2699;</button>
         </div>
 
         <div class="pack-carousel-section">
@@ -962,12 +962,12 @@
                 </div>
             </div>
             <div class="carousel-dots" id="carouselDots"></div>
-            <div class="swipe-hint">‚Üê swipe to browse packs ‚Üí</div>
+            <div class="swipe-hint">&larr; swipe to browse packs &rarr;</div>
             <div class="pack-name-label">
                 <h3 id="currentPackName">American Spirit</h3>
                 <p id="currentPackDesc">Tap to smoke</p>
             </div>
-            <button class="tap-to-smoke" id="smokeBtn">Light Up üî•</button>
+            <button class="tap-to-smoke" id="smokeBtn">Light Up</button>
         </div>
 
         <div class="friends-section">
@@ -996,7 +996,7 @@
         </div>
         <div class="request-actions">
             <button class="request-btn decline" onclick="declineRequest()">Not now</button>
-            <button class="request-btn accept" onclick="acceptRequest()">Light up üî•</button>
+            <button class="request-btn accept" onclick="acceptRequest()">Light up</button>
         </div>
     </div>
 
@@ -1055,7 +1055,7 @@
             <div class="modal-subtitle">Invite them to smoke with you?</div>
             <div class="modal-actions">
                 <button class="modal-btn secondary" onclick="closeModal('smokeRequestModal')">Cancel</button>
-                <button class="modal-btn primary" onclick="sendSmokeRequest()">Send üî•</button>
+                <button class="modal-btn primary" onclick="sendSmokeRequest()">Send</button>
             </div>
         </div>
     </div>
@@ -1143,55 +1143,84 @@
                 id: 'american-spirit-turquoise',
                 name: 'American Spirit',
                 desc: 'Turquoise - Organic',
-                image: 'https://images.dutyfreeaddict.com/variants/DFA_US_AMS_TQ/9e32ef3f-7dc4-40c5-854a-20b4d0b31e81.webp'
+                colors: ['#1B9AAA', '#0D7377'],
+                textColor: '#fff',
+                logo: 'AMERICAN SPIRIT',
+                accent: 'ORGANIC'
             },
             {
                 id: 'american-spirit-yellow',
                 name: 'American Spirit',
                 desc: 'Yellow - Light',
-                image: 'https://images.dutyfreeaddict.com/variants/DFA_US_AMS_MELLOW/24fc88cc-64d9-432b-b8cd-0e1d2dfe8ad1.webp'
+                colors: ['#F4D03F', '#E9B824'],
+                textColor: '#333',
+                logo: 'AMERICAN SPIRIT',
+                accent: 'LIGHT'
             },
             {
                 id: 'marlboro-red',
                 name: 'Marlboro',
                 desc: 'Red',
-                image: 'https://images.dutyfreeaddict.com/variants/DFA_US_MRL_RD_KING/1b1af8f9-7896-4c1c-9a7e-48be09f5c65b.webp'
+                colors: ['#C41E3A', '#8B0000'],
+                textColor: '#fff',
+                logo: 'Marlboro',
+                accent: null,
+                chevron: true
             },
             {
                 id: 'marlboro-gold',
                 name: 'Marlboro',
                 desc: 'Gold',
-                image: 'https://images.dutyfreeaddict.com/variants/DFA_US_MRL_GD/21c1f844-d3b6-4bbb-a4ee-51a7f0e0d41d.webp'
+                colors: ['#DAA520', '#B8860B'],
+                textColor: '#fff',
+                logo: 'Marlboro',
+                accent: 'GOLD',
+                chevron: true
             },
             {
                 id: 'camel-blue',
                 name: 'Camel',
                 desc: 'Blue',
-                image: 'https://images.dutyfreeaddict.com/variants/DFA_US_CML_BLUE_KING/e5bc087b-f9b7-4ffe-b0f5-5f5a6b0d3c7a.webp'
+                colors: ['#4169E1', '#1E3A8A'],
+                textColor: '#fff',
+                logo: 'CAMEL',
+                accent: 'BLUE'
             },
             {
                 id: 'camel-filters',
                 name: 'Camel',
                 desc: 'Filters',
-                image: 'https://images.dutyfreeaddict.com/variants/DFA_US_CML_FILTERS_KING/f3c23d85-c4cd-4b9d-b75a-e3a6b6d8c7b9.webp'
+                colors: ['#DEB887', '#D2691E'],
+                textColor: '#333',
+                logo: 'CAMEL',
+                accent: 'FILTERS'
             },
             {
                 id: 'newport',
                 name: 'Newport',
                 desc: 'Menthol',
-                image: 'https://images.dutyfreeaddict.com/variants/DFA_US_NPT_KING/3dae6d5e-c4a5-4e8f-b4c8-6c8d9e7f8a9b.webp'
+                colors: ['#228B22', '#006400'],
+                textColor: '#fff',
+                logo: 'Newport',
+                accent: 'MENTHOL'
             },
             {
                 id: 'parliament',
                 name: 'Parliament',
                 desc: 'Lights',
-                image: 'https://images.dutyfreeaddict.com/variants/DFA_US_PARLIAMENT_LIGHTS_KING/a2b3c4d5-e6f7-4a8b-9c0d-1e2f3a4b5c6d.webp'
+                colors: ['#4682B4', '#2C5282'],
+                textColor: '#fff',
+                logo: 'PARLIAMENT',
+                accent: 'LIGHTS'
             },
             {
                 id: 'zhonghua',
-                name: '‰∏≠Âçé Zhonghua',
+                name: 'Zhonghua',
                 desc: 'Classic Chinese',
-                image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/32/Chunghwa_cigarettes.jpg/220px-Chunghwa_cigarettes.jpg'
+                colors: ['#8B0000', '#5C0000'],
+                textColor: '#FFD700',
+                logo: 'ZHONGHUA',
+                accent: 'CLASSIC'
             },
             {
                 id: 'custom',
@@ -1301,7 +1330,31 @@
                         }
                     };
                 } else {
-                    slide.innerHTML = `<img src="${pack.image}" alt="${pack.name}" onerror="this.parentElement.style.background='linear-gradient(135deg,#222,#111)'; this.style.display='none';">`;
+                    // Create CSS-styled pack
+                    slide.style.background = `linear-gradient(135deg, ${pack.colors[0]}, ${pack.colors[1]})`;
+                    slide.style.display = 'flex';
+                    slide.style.flexDirection = 'column';
+                    slide.style.alignItems = 'center';
+                    slide.style.justifyContent = 'center';
+                    slide.style.padding = '20px';
+                    slide.style.position = 'relative';
+                    slide.style.overflow = 'hidden';
+
+                    let packHTML = '';
+
+                    // Add chevron for Marlboro
+                    if (pack.chevron) {
+                        packHTML += `<div style="position:absolute;top:0;left:0;right:0;height:60%;background:linear-gradient(180deg, #fff 0%, #fff 40%, transparent 40%);clip-path:polygon(0 0, 100% 0, 100% 70%, 50% 100%, 0 70%);"></div>`;
+                    }
+
+                    packHTML += `
+                        <div style="position:relative;z-index:1;text-align:center;">
+                            <div style="font-size:${pack.logo.length > 10 ? '0.9rem' : '1.1rem'};font-weight:bold;color:${pack.textColor};letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;text-shadow:1px 1px 2px rgba(0,0,0,0.3);">${pack.logo}</div>
+                            ${pack.accent ? `<div style="font-size:0.7rem;color:${pack.textColor};opacity:0.9;letter-spacing:1px;">${pack.accent}</div>` : ''}
+                        </div>
+                    `;
+
+                    slide.innerHTML = packHTML;
                     slide.onclick = () => {
                         if (index !== currentPackIndex) {
                             goToSlide(index);
@@ -1757,7 +1810,7 @@
             });
 
             closeModal('smokeRequestModal');
-            showToast('Smoke request sent! üî•');
+            showToast('Smoke request sent!');
 
             requestRef.on('value', (snap) => {
                 const request = snap.val();
@@ -1867,7 +1920,7 @@
 
                 if (remaining <= 0) {
                     clearInterval(timerInterval);
-                    showToast('Smoke session complete! üö¨');
+                    showToast('Smoke session complete!');
                     setTimeout(() => {
                         endSession();
                     }, 2000);
