@@ -6,10 +6,17 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Smoke With Me">
-    <meta name="theme-color" content="#1a1a2e">
+    <meta name="theme-color" content="#000000">
     <title>Smoke With Me</title>
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon-192.png">
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+
     <style>
         * {
             margin: 0;
@@ -20,100 +27,770 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            background: #000;
             min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
             color: #fff;
-            overflow: hidden;
-            position: fixed;
-            width: 100%;
-            height: 100%;
+            overflow-x: hidden;
         }
 
-        .container {
-            text-align: center;
+        /* Screen Management */
+        .screen {
+            display: none;
+            min-height: 100vh;
             padding: 1.5rem;
-            max-width: 100%;
-            width: 100%;
-            height: 100%;
+            padding-top: calc(1.5rem + env(safe-area-inset-top));
+            padding-bottom: calc(1.5rem + env(safe-area-inset-bottom));
+        }
+
+        .screen.active {
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
         }
 
-        .header {
-            padding-top: env(safe-area-inset-top);
+        /* Auth Screen */
+        #authScreen {
+            justify-content: center;
+            align-items: center;
+            text-align: center;
         }
 
-        .title {
-            font-size: 1.8rem;
-            margin-bottom: 0.3rem;
-            font-weight: 300;
-            letter-spacing: 3px;
-        }
-
-        .subtitle {
-            color: #888;
-            font-size: 0.85rem;
+        .auth-logo {
+            font-size: 4rem;
             margin-bottom: 1rem;
         }
 
-        .main-content {
+        .auth-title {
+            font-size: 2rem;
+            font-weight: 300;
+            letter-spacing: 3px;
+            margin-bottom: 0.5rem;
+        }
+
+        .auth-subtitle {
+            color: #666;
+            margin-bottom: 3rem;
+        }
+
+        .google-btn {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #fff;
+            color: #333;
+            padding: 14px 28px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 500;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .google-btn:active {
+            transform: scale(0.98);
+        }
+
+        .google-btn img {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* Home Screen */
+        #homeScreen {
+            gap: 1rem;
+        }
+
+        .home-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #333, #555);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            overflow: hidden;
+        }
+
+        .user-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .user-name {
+            font-weight: 500;
+        }
+
+        .settings-btn {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            color: #fff;
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
+
+        /* Pack Carousel */
+        .pack-carousel-section {
             flex: 1;
             display: flex;
             flex-direction: column;
-            justify-content: center;
             align-items: center;
+            justify-content: center;
+            position: relative;
+            min-height: 380px;
         }
 
-        .cigarette-container {
-            position: relative;
-            height: 250px;
+        .pack-carousel {
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 2rem;
             width: 100%;
+            position: relative;
+            overflow: hidden;
+            touch-action: pan-x;
         }
 
-        .cigarette-wrapper {
-            position: relative;
-            transform: rotate(-5deg);
+        .pack-carousel-inner {
+            display: flex;
+            transition: transform 0.3s ease-out;
+            gap: 20px;
+            padding: 0 calc(50% - 100px);
         }
 
-        .cigarette {
+        .pack-slide {
+            flex-shrink: 0;
+            width: 200px;
+            height: 300px;
+            border-radius: 12px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.3s, opacity 0.3s;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+        }
+
+        .pack-slide:not(.active) {
+            transform: scale(0.85);
+            opacity: 0.5;
+        }
+
+        .pack-slide.active {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        .pack-slide img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Custom pack styling */
+        .pack-slide.custom-pack {
+            background: linear-gradient(135deg, #1a1a1a, #333);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 2px dashed #444;
+        }
+
+        .custom-pack-content {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .custom-pack-content .plus-icon {
+            font-size: 3rem;
+            color: #555;
+            margin-bottom: 10px;
+        }
+
+        .custom-pack-content span {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .custom-pack-preview {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Carousel dots */
+        .carousel-dots {
+            display: flex;
+            gap: 8px;
+            margin-top: 20px;
+        }
+
+        .carousel-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #333;
+            transition: background 0.3s, transform 0.3s;
+        }
+
+        .carousel-dot.active {
+            background: #fff;
+            transform: scale(1.2);
+        }
+
+        /* Swipe hint */
+        .swipe-hint {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #444;
+            font-size: 0.8rem;
+            margin-top: 15px;
+        }
+
+        .pack-name-label {
+            text-align: center;
+            margin-top: 15px;
+        }
+
+        .pack-name-label h3 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .pack-name-label p {
+            color: #666;
+            font-size: 0.85rem;
+        }
+
+        .tap-to-smoke {
+            margin-top: 20px;
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #333, #222);
+            border: 1px solid #444;
+            border-radius: 30px;
+            color: #fff;
+            font-size: 0.95rem;
+            cursor: pointer;
+        }
+
+        .tap-to-smoke:active {
+            transform: scale(0.98);
+        }
+
+        /* Friends Section */
+        .friends-section {
+            background: rgba(255,255,255,0.03);
+            border-radius: 16px;
+            padding: 1rem;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .section-title {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .add-friend-btn {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            padding: 6px 12px;
+            border-radius: 20px;
+            color: #fff;
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+
+        .friends-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .friend-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .friend-item:active {
+            background: rgba(255,255,255,0.08);
+        }
+
+        .friend-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #333, #555);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 1.1rem;
+            overflow: hidden;
+        }
+
+        .friend-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .friend-info {
+            flex: 1;
+        }
+
+        .friend-name {
+            font-weight: 500;
+        }
+
+        .friend-stats {
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .friend-status {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #4CAF50;
+        }
+
+        .friend-status.offline {
+            background: #333;
+        }
+
+        .no-friends {
+            text-align: center;
+            padding: 2rem;
+            color: #444;
+        }
+
+        /* Your Code Section */
+        .your-code-section {
+            background: rgba(255,255,255,0.03);
+            border-radius: 12px;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .your-code-label {
+            font-size: 0.85rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+
+        .your-code {
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: 4px;
+            color: #fff;
+            cursor: pointer;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.9);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+            padding: 1.5rem;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: #111;
+            border-radius: 20px;
+            padding: 1.5rem;
+            width: 100%;
+            max-width: 340px;
+            text-align: center;
+            border: 1px solid #222;
+        }
+
+        .modal-title {
+            font-size: 1.3rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .modal-subtitle {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 14px;
+            border: 1px solid #333;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.05);
+            color: #fff;
+            font-size: 1rem;
+            margin-bottom: 1rem;
+            text-align: center;
+            letter-spacing: 2px;
+        }
+
+        .modal-input::placeholder {
+            color: #444;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 0.8rem;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+        }
+
+        .modal-btn.primary {
+            background: #fff;
+            color: #000;
+        }
+
+        .modal-btn.secondary {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+        }
+
+        /* Custom Pack Creator Modal */
+        #customPackModal .modal {
+            max-width: 380px;
+        }
+
+        .creator-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .creator-tab {
+            flex: 1;
+            padding: 12px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid #333;
+            border-radius: 10px;
+            color: #888;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .creator-tab.active {
+            background: #fff;
+            color: #000;
+            border-color: #fff;
+        }
+
+        .creator-content {
+            min-height: 250px;
+        }
+
+        /* Upload tab */
+        .upload-area {
+            border: 2px dashed #333;
+            border-radius: 12px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+
+        .upload-area:hover {
+            border-color: #555;
+        }
+
+        .upload-area.has-image {
+            padding: 0;
+            border-style: solid;
+        }
+
+        .upload-area .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 10px;
+        }
+
+        .upload-area p {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .upload-preview {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 10px;
+        }
+
+        #packImageInput {
+            display: none;
+        }
+
+        /* Draw tab - Xbox style */
+        .draw-area {
+            background: #111;
+            border-radius: 12px;
+            padding: 15px;
+        }
+
+        .canvas-container {
             position: relative;
-            width: 220px;
-            height: 14px;
+            width: 100%;
+            aspect-ratio: 0.67;
+            background: linear-gradient(135deg, #1a1a1a, #0a0a0a);
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        #drawCanvas {
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+        }
+
+        .draw-tools {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .color-picker {
+            display: flex;
+            gap: 6px;
+        }
+
+        .color-btn {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+
+        .color-btn.active {
+            border-color: #fff;
+            transform: scale(1.1);
+        }
+
+        .tool-btn {
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.1);
+            border: none;
+            border-radius: 20px;
+            color: #fff;
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+
+        .tool-btn.active {
+            background: #fff;
+            color: #000;
+        }
+
+        .pack-name-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #333;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.05);
+            color: #fff;
+            font-size: 0.95rem;
+            margin-top: 15px;
+            text-align: center;
+        }
+
+        /* Smoke Request Modal */
+        .request-modal .friend-preview {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .request-modal .friend-avatar {
+            width: 80px;
+            height: 80px;
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .request-modal .friend-name {
+            font-size: 1.2rem;
+        }
+
+        /* Incoming Request Screen */
+        #requestScreen {
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .request-content {
+            animation: pulse-subtle 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-subtle {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+
+        .request-from {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 1rem;
+        }
+
+        .requester-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #333, #555);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            font-weight: 600;
+            margin: 0 auto 1rem;
+            overflow: hidden;
+        }
+
+        .requester-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .requester-name {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .request-message {
+            color: #666;
+            margin-bottom: 2rem;
+        }
+
+        .request-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+        }
+
+        .request-btn {
+            padding: 16px 32px;
+            border-radius: 30px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+        }
+
+        .request-btn.accept {
+            background: #fff;
+            color: #000;
+        }
+
+        .request-btn.decline {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+        }
+
+        /* Smoking Screen */
+        #smokingScreen {
+            justify-content: space-between;
+        }
+
+        .smoking-header {
+            text-align: center;
+        }
+
+        .smoking-with {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .partner-name {
+            font-size: 1.3rem;
+            font-weight: 500;
+            margin-top: 0.3rem;
+        }
+
+        .smoking-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .cigarette-solo {
+            position: relative;
+            width: 240px;
+            height: 16px;
             background: linear-gradient(to right, #f5f5dc 0%, #e8e8d0 100%);
-            border-radius: 7px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            overflow: visible;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            transform: rotate(-5deg);
+            margin-bottom: 3rem;
         }
 
-        .filter {
+        .cigarette-solo .filter {
             position: absolute;
             right: 0;
-            width: 35px;
+            width: 40px;
             height: 100%;
             background: linear-gradient(to right, #d4a574, #c19a6b);
-            border-left: 1px solid #a0826d;
-            border-radius: 0 7px 7px 0;
+            border-radius: 0 8px 8px 0;
         }
 
-        .filter::after {
-            content: '';
-            position: absolute;
-            left: 5px;
-            top: 20%;
-            width: 1px;
-            height: 60%;
-            background: rgba(160, 130, 109, 0.3);
-        }
-
-        .burn-line {
+        .cigarette-solo .burn-area {
             position: absolute;
             left: 0;
             top: 0;
@@ -125,245 +802,104 @@
                 #3a3a3a 85%,
                 #1a1a1a 100%
             );
-            transition: width 0.5s ease-out;
-            border-radius: 7px 0 0 7px;
+            border-radius: 8px 0 0 8px;
+            transition: width 0.5s linear;
         }
 
-        .ember {
+        .cigarette-solo .ember {
             position: absolute;
-            right: -4px;
+            right: -5px;
             top: 50%;
             transform: translateY(-50%);
-            width: 10px;
-            height: 10px;
+            width: 12px;
+            height: 12px;
             background: radial-gradient(circle, #ff6b00 0%, #ff4500 50%, transparent 70%);
             border-radius: 50%;
-            box-shadow: 0 0 25px #ff4500, 0 0 50px rgba(255, 69, 0, 0.6);
-            animation: ember-glow 2s ease-in-out infinite;
+            box-shadow: 0 0 30px #ff4500, 0 0 60px rgba(255, 69, 0, 0.6);
+            animation: ember-pulse 2s ease-in-out infinite;
         }
 
-        @keyframes ember-glow {
+        @keyframes ember-pulse {
             0%, 100% {
-                opacity: 0.9;
                 transform: translateY(-50%) scale(1);
-                box-shadow: 0 0 25px #ff4500, 0 0 50px rgba(255, 69, 0, 0.6);
+                box-shadow: 0 0 30px #ff4500, 0 0 60px rgba(255, 69, 0, 0.6);
             }
             50% {
-                opacity: 1;
-                transform: translateY(-50%) scale(1.15);
-                box-shadow: 0 0 35px #ff4500, 0 0 70px rgba(255, 69, 0, 0.8);
+                transform: translateY(-50%) scale(1.2);
+                box-shadow: 0 0 40px #ff4500, 0 0 80px rgba(255, 69, 0, 0.8);
             }
         }
 
-        .smoke-container {
+        .cigarette-solo .smoke-wisps {
             position: absolute;
-            left: -20px;
+            left: -15px;
             top: 50%;
             transform: translateY(-50%);
-            width: 60px;
-            height: 80px;
-            pointer-events: none;
         }
 
-        .smoke {
+        .smoke-wisp {
             position: absolute;
-            left: 0;
-            bottom: 0;
-            width: 30px;
-            height: 30px;
-            opacity: 0;
-            animation: smoke-rise 4s ease-out infinite;
+            width: 20px;
+            height: 20px;
+            background: radial-gradient(circle, rgba(200,200,200,0.4) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: wisp 3s ease-out infinite;
         }
 
-        .smoke:nth-child(2) {
-            animation-delay: 1.3s;
-        }
+        .smoke-wisp:nth-child(2) { animation-delay: 1s; }
+        .smoke-wisp:nth-child(3) { animation-delay: 2s; }
 
-        .smoke:nth-child(3) {
-            animation-delay: 2.6s;
-        }
-
-        @keyframes smoke-rise {
+        @keyframes wisp {
             0% {
-                transform: translateY(0) translateX(0) scale(0.4);
-                opacity: 0.7;
-            }
-            50% {
-                opacity: 0.4;
+                transform: translate(0, 0) scale(0.5);
+                opacity: 0.6;
             }
             100% {
-                transform: translateY(-80px) translateX(25px) scale(1.2);
+                transform: translate(20px, -60px) scale(1.5);
                 opacity: 0;
             }
         }
 
-        .smoke::before {
-            content: '';
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            background: radial-gradient(circle, rgba(220, 220, 220, 0.5) 0%, transparent 70%);
-            border-radius: 50%;
+        .timer-display {
+            text-align: center;
         }
 
-        .status {
-            background: rgba(255, 255, 255, 0.06);
-            border-radius: 16px;
-            padding: 1.2rem;
-            margin-bottom: 1.5rem;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            width: 100%;
-            max-width: 350px;
+        .timer-value {
+            font-size: 3rem;
+            font-weight: 300;
+            letter-spacing: 4px;
         }
 
-        .status-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 0.9rem;
-            font-size: 0.95rem;
-        }
-
-        .status-item:last-child {
-            margin-bottom: 0;
-        }
-
-        .status-label {
-            color: #999;
+        .timer-label {
+            color: #666;
             font-size: 0.9rem;
+            margin-top: 0.5rem;
         }
 
-        .status-value {
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
+        .smoking-footer {
+            text-align: center;
         }
 
-        .progress {
-            color: #4CAF50;
-            font-size: 1.1rem;
-        }
-
-        .connection-status {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #4CAF50;
-            animation: pulse 2s ease-in-out infinite;
-        }
-
-        .connection-status.disconnected {
-            background: #ff4444;
-            animation: none;
-        }
-
-        .connection-status.connecting {
-            background: #ffa500;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.4; }
-        }
-
-        .controls {
-            padding-bottom: env(safe-area-inset-bottom);
-        }
-
-        .btn-group {
-            display: flex;
-            gap: 0.8rem;
-            justify-content: center;
-            margin-bottom: 1rem;
-        }
-
-        button {
-            padding: 1rem 2rem;
-            border: none;
-            border-radius: 12px;
+        .end-session-btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid #333;
+            color: #fff;
+            padding: 14px 28px;
+            border-radius: 30px;
             font-size: 1rem;
             cursor: pointer;
-            transition: all 0.3s ease;
-            font-weight: 600;
-            flex: 1;
-            max-width: 160px;
         }
 
-        .start-btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-        }
-
-        .start-btn:active {
-            transform: scale(0.96);
-        }
-
-        .start-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .reset-btn {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .reset-btn:active {
-            background: rgba(255, 255, 255, 0.15);
-        }
-
-        .share-section {
-            background: rgba(255, 255, 255, 0.06);
-            border-radius: 12px;
-            padding: 1rem;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-        }
-
-        .share-label {
-            font-size: 0.85rem;
-            color: #999;
-            margin-bottom: 0.5rem;
-        }
-
-        .code {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            background: rgba(255, 255, 255, 0.12);
-            padding: 0.7rem 1.2rem;
-            border-radius: 8px;
-            font-family: 'Courier New', monospace;
-            letter-spacing: 3px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .code:active {
-            background: rgba(255, 255, 255, 0.18);
-            transform: scale(0.98);
-        }
-
-        .copy-icon {
-            font-size: 1rem;
-        }
-
+        /* Toast */
         .toast {
             position: fixed;
-            bottom: 2rem;
+            bottom: calc(2rem + env(safe-area-inset-bottom));
             left: 50%;
             transform: translateX(-50%) translateY(100px);
-            background: rgba(0, 0, 0, 0.9);
-            color: white;
-            padding: 0.8rem 1.5rem;
-            border-radius: 8px;
+            background: #fff;
+            color: #000;
+            padding: 12px 24px;
+            border-radius: 30px;
             font-size: 0.9rem;
             opacity: 0;
             transition: all 0.3s ease;
@@ -375,358 +911,1059 @@
             opacity: 1;
         }
 
-        .partner-info {
-            font-size: 0.8rem;
-            color: #666;
-            margin-top: 0.5rem;
+        /* Loading State */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
         }
 
-        @media (max-width: 380px) {
-            .title {
-                font-size: 1.5rem;
-            }
+        .spinner {
+            width: 30px;
+            height: 30px;
+            border: 3px solid rgba(255,255,255,0.1);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
 
-            .cigarette {
-                width: 180px;
-            }
-
-            button {
-                padding: 0.8rem 1.5rem;
-                font-size: 0.9rem;
-            }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1 class="title">SMOKE WITH ME</h1>
-            <p class="subtitle">Share a moment together</p>
+    <!-- Auth Screen -->
+    <div class="screen active" id="authScreen">
+        <div class="auth-logo">&#x1F6AC;</div>
+        <h1 class="auth-title">SMOKE WITH ME</h1>
+        <p class="auth-subtitle">Share a moment together</p>
+        <button class="google-btn" id="googleSignIn">
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+            Sign in with Google
+        </button>
+    </div>
+
+    <!-- Home Screen -->
+    <div class="screen" id="homeScreen">
+        <div class="home-header">
+            <div class="user-info">
+                <div class="user-avatar" id="userAvatar">?</div>
+                <span class="user-name" id="userName">Loading...</span>
+            </div>
+            <button class="settings-btn" id="settingsBtn">&#x2699;</button>
         </div>
 
-        <div class="main-content">
-            <div class="cigarette-container">
-                <div class="cigarette-wrapper">
-                    <div class="cigarette">
-                        <div class="filter"></div>
-                        <div class="burn-line" id="burnLine">
-                            <div class="ember" id="ember"></div>
-                            <div class="smoke-container">
-                                <div class="smoke"></div>
-                                <div class="smoke"></div>
-                                <div class="smoke"></div>
-                            </div>
-                        </div>
+        <div class="pack-carousel-section">
+            <div class="pack-carousel" id="packCarousel">
+                <div class="pack-carousel-inner" id="carouselInner">
+                    <!-- Pack slides will be rendered here -->
+                </div>
+            </div>
+            <div class="carousel-dots" id="carouselDots"></div>
+            <div class="swipe-hint">&larr; swipe to browse packs &rarr;</div>
+            <div class="pack-name-label">
+                <h3 id="currentPackName">American Spirit</h3>
+                <p id="currentPackDesc">Tap to smoke</p>
+            </div>
+            <button class="tap-to-smoke" id="smokeBtn">Light Up</button>
+        </div>
+
+        <div class="friends-section">
+            <div class="section-header">
+                <span class="section-title">Smoke Buddies</span>
+                <button class="add-friend-btn" onclick="showAddFriendModal()">+ Add</button>
+            </div>
+            <div class="friends-list" id="friendsList">
+                <div class="loading"><div class="spinner"></div></div>
+            </div>
+        </div>
+
+        <div class="your-code-section">
+            <div class="your-code-label">Your friend code</div>
+            <div class="your-code" id="yourCode" onclick="copyCode()">------</div>
+        </div>
+    </div>
+
+    <!-- Incoming Request Screen -->
+    <div class="screen" id="requestScreen">
+        <div class="request-content">
+            <div class="request-from">wants to smoke with you</div>
+            <div class="requester-avatar" id="requesterAvatar">?</div>
+            <div class="requester-name" id="requesterName">Someone</div>
+            <div class="request-message">Light up together?</div>
+        </div>
+        <div class="request-actions">
+            <button class="request-btn decline" onclick="declineRequest()">Not now</button>
+            <button class="request-btn accept" onclick="acceptRequest()">Light up</button>
+        </div>
+    </div>
+
+    <!-- Smoking Screen -->
+    <div class="screen" id="smokingScreen">
+        <div class="smoking-header">
+            <div class="smoking-with">Smoking with</div>
+            <div class="partner-name" id="partnerName">Your buddy</div>
+        </div>
+
+        <div class="smoking-main">
+            <div class="cigarette-solo">
+                <div class="filter"></div>
+                <div class="burn-area" id="burnArea">
+                    <div class="ember"></div>
+                    <div class="smoke-wisps">
+                        <div class="smoke-wisp"></div>
+                        <div class="smoke-wisp"></div>
+                        <div class="smoke-wisp"></div>
                     </div>
                 </div>
             </div>
 
-            <div class="status">
-                <div class="status-item">
-                    <span class="status-label">Connection</span>
-                    <span class="status-value">
-                        <span class="connection-status" id="connectionDot"></span>
-                        <span id="connectionStatus">Connecting...</span>
-                    </span>
-                </div>
-                <div class="status-item">
-                    <span class="status-label">Progress</span>
-                    <span class="status-value progress" id="progress">0%</span>
-                </div>
-                <div class="status-item">
-                    <span class="status-label">Time Left</span>
-                    <span class="status-value" id="timeRemaining">5:00</span>
-                </div>
+            <div class="timer-display">
+                <div class="timer-value" id="timerValue">5:00</div>
+                <div class="timer-label">time remaining</div>
             </div>
         </div>
 
-        <div class="controls">
-            <div class="btn-group">
-                <button class="start-btn" id="startBtn">Light Up</button>
-                <button class="reset-btn" id="resetBtn">Reset</button>
-            </div>
+        <div class="smoking-footer">
+            <button class="end-session-btn" onclick="endSession()">End Session</button>
+        </div>
+    </div>
 
-            <div class="share-section">
-                <div class="share-label">Share with your person:</div>
-                <div class="code" id="roomCode" onclick="copyCode()">
-                    <span id="codeText">LOADING</span>
-                    <span class="copy-icon">📋</span>
-                </div>
-                <div class="partner-info" id="partnerInfo"></div>
+    <!-- Add Friend Modal -->
+    <div class="modal-overlay" id="addFriendModal">
+        <div class="modal">
+            <div class="modal-title">Add Smoke Buddy</div>
+            <div class="modal-subtitle">Enter their friend code</div>
+            <input type="text" class="modal-input" id="friendCodeInput" placeholder="XXXXXX" maxlength="6">
+            <div class="modal-actions">
+                <button class="modal-btn secondary" onclick="closeModal('addFriendModal')">Cancel</button>
+                <button class="modal-btn primary" onclick="addFriend()">Add</button>
             </div>
         </div>
     </div>
 
-    <div class="toast" id="toast">Link copied to clipboard!</div>
+    <!-- Smoke Request Modal -->
+    <div class="modal-overlay" id="smokeRequestModal">
+        <div class="modal request-modal">
+            <div class="modal-title">Send Smoke Request</div>
+            <div class="friend-preview">
+                <div class="friend-avatar" id="requestFriendAvatar">?</div>
+                <div class="friend-name" id="requestFriendName">Friend</div>
+            </div>
+            <div class="modal-subtitle">Invite them to smoke with you?</div>
+            <div class="modal-actions">
+                <button class="modal-btn secondary" onclick="closeModal('smokeRequestModal')">Cancel</button>
+                <button class="modal-btn primary" onclick="sendSmokeRequest()">Send</button>
+            </div>
+        </div>
+    </div>
 
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <!-- Custom Pack Creator Modal -->
+    <div class="modal-overlay" id="customPackModal">
+        <div class="modal">
+            <div class="modal-title">Create Your Pack</div>
+            <div class="creator-tabs">
+                <button class="creator-tab active" data-tab="upload">üì∑ Upload Image</button>
+                <button class="creator-tab" data-tab="draw">‚úèÔ∏è Draw</button>
+            </div>
+            <div class="creator-content">
+                <!-- Upload Tab -->
+                <div class="tab-content" id="uploadTab">
+                    <div class="upload-area" id="uploadArea">
+                        <div class="upload-icon">üìÅ</div>
+                        <p>Tap to upload an image</p>
+                    </div>
+                    <input type="file" id="packImageInput" accept="image/*">
+                </div>
+                <!-- Draw Tab -->
+                <div class="tab-content" id="drawTab" style="display:none;">
+                    <div class="draw-area">
+                        <div class="canvas-container">
+                            <canvas id="drawCanvas"></canvas>
+                        </div>
+                        <div class="draw-tools">
+                            <div class="color-picker">
+                                <button class="color-btn active" style="background:#fff" data-color="#ffffff"></button>
+                                <button class="color-btn" style="background:#ff4444" data-color="#ff4444"></button>
+                                <button class="color-btn" style="background:#44ff44" data-color="#44ff44"></button>
+                                <button class="color-btn" style="background:#4444ff" data-color="#4444ff"></button>
+                                <button class="color-btn" style="background:#ffff44" data-color="#ffff44"></button>
+                                <button class="color-btn" style="background:#ff44ff" data-color="#ff44ff"></button>
+                            </div>
+                            <button class="tool-btn" id="clearCanvasBtn">Clear</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <input type="text" class="pack-name-input" id="customPackName" placeholder="Pack name...">
+            <div class="modal-actions" style="margin-top:15px;">
+                <button class="modal-btn secondary" onclick="closeModal('customPackModal')">Cancel</button>
+                <button class="modal-btn primary" onclick="saveCustomPack()">Save Pack</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast">Message</div>
 
     <script>
-        // ===========================================
-        // FIREBASE CONFIGURATION
-        // ===========================================
-        // To make this app work, you need to:
-        // 1. Go to https://console.firebase.google.com/
-        // 2. Create a new project (or use existing)
-        // 3. Go to Project Settings > General > Your apps
-        // 4. Click "Add app" > Web
-        // 5. Copy the config values below
-        // 6. Go to Realtime Database > Create Database
-        // 7. Set rules to: { "rules": { ".read": true, ".write": true } }
-        //    (For production, use more restrictive rules)
-        // ===========================================
-
+        // Firebase Configuration
         const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT.firebaseapp.com",
-            databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
-            projectId: "YOUR_PROJECT",
-            storageBucket: "YOUR_PROJECT.appspot.com",
-            messagingSenderId: "YOUR_SENDER_ID",
-            appId: "YOUR_APP_ID"
+            apiKey: "AIzaSyDrbGmEwyIm7nj6Dr63tbHCB31eFRD7oUw",
+            authDomain: "cig-time.firebaseapp.com",
+            databaseURL: "https://cig-time-default-rtdb.firebaseio.com",
+            projectId: "cig-time",
+            storageBucket: "cig-time.firebasestorage.app",
+            messagingSenderId: "883351139560",
+            appId: "1:883351139560:web:0124c186cc39f2c2f5c55d",
+            measurementId: "G-B8NMCEQD5H"
         };
 
-        // Check if Firebase is configured
-        const isFirebaseConfigured = firebaseConfig.apiKey !== "YOUR_API_KEY";
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.database();
+        const storage = firebase.storage();
 
-        let db = null;
-        let roomRef = null;
+        // App State
+        let currentUser = null;
+        let userData = null;
+        let friends = {};
+        let currentRequest = null;
+        let selectedFriendForRequest = null;
+        let smokingSessionRef = null;
+        let timerInterval = null;
+        let currentPackIndex = 0;
+        let customPackImage = null;
 
-        if (isFirebaseConfigured) {
-            firebase.initializeApp(firebaseConfig);
-            db = firebase.database();
-        }
+        // Pack definitions with real images
+        const PACKS = [
+            {
+                id: 'american-spirit-turquoise',
+                name: 'American Spirit',
+                desc: 'Turquoise - Organic',
+                colors: ['#1B9AAA', '#0D7377'],
+                textColor: '#fff',
+                logo: 'AMERICAN SPIRIT',
+                accent: 'ORGANIC'
+            },
+            {
+                id: 'american-spirit-yellow',
+                name: 'American Spirit',
+                desc: 'Yellow - Light',
+                colors: ['#F4D03F', '#E9B824'],
+                textColor: '#333',
+                logo: 'AMERICAN SPIRIT',
+                accent: 'LIGHT'
+            },
+            {
+                id: 'marlboro-red',
+                name: 'Marlboro',
+                desc: 'Red',
+                colors: ['#C41E3A', '#8B0000'],
+                textColor: '#fff',
+                logo: 'Marlboro',
+                accent: null,
+                chevron: true
+            },
+            {
+                id: 'marlboro-gold',
+                name: 'Marlboro',
+                desc: 'Gold',
+                colors: ['#DAA520', '#B8860B'],
+                textColor: '#fff',
+                logo: 'Marlboro',
+                accent: 'GOLD',
+                chevron: true
+            },
+            {
+                id: 'camel-blue',
+                name: 'Camel',
+                desc: 'Blue',
+                colors: ['#4169E1', '#1E3A8A'],
+                textColor: '#fff',
+                logo: 'CAMEL',
+                accent: 'BLUE'
+            },
+            {
+                id: 'camel-filters',
+                name: 'Camel',
+                desc: 'Filters',
+                colors: ['#DEB887', '#D2691E'],
+                textColor: '#333',
+                logo: 'CAMEL',
+                accent: 'FILTERS'
+            },
+            {
+                id: 'newport',
+                name: 'Newport',
+                desc: 'Menthol',
+                colors: ['#228B22', '#006400'],
+                textColor: '#fff',
+                logo: 'Newport',
+                accent: 'MENTHOL'
+            },
+            {
+                id: 'parliament',
+                name: 'Parliament',
+                desc: 'Lights',
+                colors: ['#4682B4', '#2C5282'],
+                textColor: '#fff',
+                logo: 'PARLIAMENT',
+                accent: 'LIGHTS'
+            },
+            {
+                id: 'zhonghua',
+                name: 'Zhonghua',
+                desc: 'Classic Chinese',
+                colors: ['#8B0000', '#5C0000'],
+                textColor: '#FFD700',
+                logo: 'ZHONGHUA',
+                accent: 'CLASSIC'
+            },
+            {
+                id: 'custom',
+                name: 'Custom Pack',
+                desc: 'Create your own',
+                isCustom: true
+            }
+        ];
 
-        // Service Worker Registration
-        if ('serviceWorker' in navigator && window.location.protocol !== 'about:') {
-            navigator.serviceWorker.register('sw.js').catch(err => {
-                // Service worker not available in preview
+        // Carousel functionality
+        let touchStartX = 0;
+        let touchEndX = 0;
+        let isDragging = false;
+
+        function initCarousel() {
+            const carousel = document.getElementById('packCarousel');
+            const inner = document.getElementById('carouselInner');
+
+            // Render pack slides
+            renderPackSlides();
+
+            // Touch events
+            carousel.addEventListener('touchstart', (e) => {
+                touchStartX = e.touches[0].clientX;
+                isDragging = true;
+            }, { passive: true });
+
+            carousel.addEventListener('touchmove', (e) => {
+                if (!isDragging) return;
+                touchEndX = e.touches[0].clientX;
+            }, { passive: true });
+
+            carousel.addEventListener('touchend', () => {
+                if (!isDragging) return;
+                isDragging = false;
+                handleSwipe();
+            });
+
+            // Mouse events for desktop
+            carousel.addEventListener('mousedown', (e) => {
+                touchStartX = e.clientX;
+                isDragging = true;
+            });
+
+            carousel.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                touchEndX = e.clientX;
+            });
+
+            carousel.addEventListener('mouseup', () => {
+                if (!isDragging) return;
+                isDragging = false;
+                handleSwipe();
+            });
+
+            carousel.addEventListener('mouseleave', () => {
+                isDragging = false;
             });
         }
 
-        const DURATION = 5 * 60 * 1000; // 5 minutes
-        let startTime = null;
-        let animationFrame = null;
-        let roomId = null;
-        let myId = null;
-        let myReadyState = false;
+        function handleSwipe() {
+            const diff = touchStartX - touchEndX;
+            const threshold = 50;
 
-        // Generate unique ID for this user session
-        function generateUserId() {
-            return Math.random().toString(36).substring(2, 10);
-        }
-
-        // Generate or get room ID from URL
-        function getRoomId() {
-            const params = new URLSearchParams(window.location.search);
-            if (params.has('room')) {
-                return params.get('room');
-            }
-            return Math.random().toString(36).substring(2, 8).toUpperCase();
-        }
-
-        roomId = getRoomId();
-        myId = generateUserId();
-        updateRoomCode();
-
-        // Update URL without reload
-        try {
-            if (window.location.protocol !== 'about:') {
-                const newUrl = new URL(window.location);
-                newUrl.searchParams.set('room', roomId);
-                window.history.replaceState({}, '', newUrl);
-            }
-        } catch (e) {
-            // Can't modify history in preview environment
-        }
-
-        // Initialize Firebase listener
-        function initFirebase() {
-            if (!isFirebaseConfigured) {
-                updateConnectionStatus('disconnected');
-                showToast('Firebase not configured. See setup instructions.');
-                return;
-            }
-
-            roomRef = db.ref('rooms/' + roomId);
-
-            // Listen for changes
-            roomRef.on('value', (snapshot) => {
-                const data = snapshot.val();
-
-                if (!data) {
-                    updateConnectionStatus('waiting', 0);
-                    return;
+            if (Math.abs(diff) > threshold) {
+                if (diff > 0 && currentPackIndex < PACKS.length - 1) {
+                    // Swipe left - next
+                    goToSlide(currentPackIndex + 1);
+                } else if (diff < 0 && currentPackIndex > 0) {
+                    // Swipe right - prev
+                    goToSlide(currentPackIndex - 1);
                 }
-
-                // Count ready participants
-                const participants = data.participants || {};
-                const readyParticipants = Object.values(participants).filter(p => p.ready);
-                const readyCount = readyParticipants.length;
-
-                // Check if smoking has started
-                if (data.startTime && !startTime) {
-                    startTime = data.startTime;
-                    document.getElementById('startBtn').textContent = 'Smoking...';
-                    document.getElementById('startBtn').disabled = true;
-                    updateCigarette();
-                    updateConnectionStatus('smoking', readyCount);
-                } else if (readyCount >= 2 && !data.startTime) {
-                    // Both ready, start smoking!
-                    roomRef.update({ startTime: Date.now() });
-                } else if (readyCount === 1) {
-                    updateConnectionStatus('waiting', 1);
-                } else if (readyCount === 0) {
-                    updateConnectionStatus('waiting', 0);
-                }
-            });
-
-            updateConnectionStatus('connected');
-        }
-
-        async function startSmoking() {
-            if (!isFirebaseConfigured) {
-                showToast('Firebase not configured');
-                return;
-            }
-
-            myReadyState = true;
-
-            // Mark this user as ready
-            await roomRef.child('participants').child(myId).set({
-                ready: true,
-                joinedAt: Date.now()
-            });
-
-            document.getElementById('startBtn').textContent = 'Ready ✓';
-            document.getElementById('startBtn').disabled = true;
-        }
-
-        function updateCigarette() {
-            if (!startTime) return;
-
-            const elapsed = Date.now() - startTime;
-            const progress = Math.min(elapsed / DURATION, 1);
-            const burnWidth = progress * 185; // Max burn width (cigarette - filter)
-
-            const burnLine = document.getElementById('burnLine');
-            const ember = document.getElementById('ember');
-
-            burnLine.style.width = burnWidth + 'px';
-
-            // Hide ember and smoke when finished
-            if (progress >= 1) {
-                ember.style.display = 'none';
-            } else {
-                ember.style.display = 'block';
-            }
-
-            document.getElementById('progress').textContent = Math.round(progress * 100) + '%';
-
-            const remainingMs = Math.max(DURATION - elapsed, 0);
-            const minutes = Math.floor(remainingMs / 60000);
-            const seconds = Math.floor((remainingMs % 60000) / 1000);
-            document.getElementById('timeRemaining').textContent =
-                `${minutes}:${seconds.toString().padStart(2, '0')}`;
-
-            if (progress < 1) {
-                animationFrame = requestAnimationFrame(updateCigarette);
-            } else {
-                document.getElementById('timeRemaining').textContent = 'Done ✓';
-                updateConnectionStatus('done');
             }
         }
 
-        async function reset() {
-            startTime = null;
-            myReadyState = false;
+        function renderPackSlides() {
+            const inner = document.getElementById('carouselInner');
+            const dots = document.getElementById('carouselDots');
 
-            if (animationFrame) {
-                cancelAnimationFrame(animationFrame);
-            }
+            inner.innerHTML = '';
+            dots.innerHTML = '';
 
-            // Clear Firebase data for this room
-            if (isFirebaseConfigured && roomRef) {
-                await roomRef.remove();
-            }
+            // Get user's custom pack if exists
+            const customPack = userData?.customPack;
 
-            const burnLine = document.getElementById('burnLine');
-            burnLine.style.width = '0px';
-            document.getElementById('ember').style.display = 'block';
-            document.getElementById('progress').textContent = '0%';
-            document.getElementById('timeRemaining').textContent = '5:00';
-            document.getElementById('startBtn').disabled = false;
-            document.getElementById('startBtn').textContent = 'Light Up';
+            PACKS.forEach((pack, index) => {
+                const slide = document.createElement('div');
+                slide.className = `pack-slide ${index === currentPackIndex ? 'active' : ''}`;
 
-            updateConnectionStatus('waiting', 0);
-        }
-
-        function updateConnectionStatus(status, participants = 0) {
-            const dot = document.getElementById('connectionDot');
-            const statusText = document.getElementById('connectionStatus');
-            const partnerInfo = document.getElementById('partnerInfo');
-
-            dot.className = 'connection-status';
-
-            switch(status) {
-                case 'smoking':
-                    statusText.textContent = 'Smoking Together';
-                    partnerInfo.textContent = 'Both smoking ✓';
-                    break;
-                case 'done':
-                    statusText.textContent = 'Finished';
-                    partnerInfo.textContent = 'Until next time ✓';
-                    break;
-                case 'waiting':
-                    if (participants === 0) {
-                        dot.classList.add('connecting');
-                        statusText.textContent = 'Waiting';
-                        partnerInfo.textContent = 'Share the link to connect';
-                    } else if (participants === 1) {
-                        dot.classList.add('connecting');
-                        statusText.textContent = 'Waiting to Smoke';
-                        partnerInfo.textContent = 'Waiting for your person to light up...';
+                if (pack.isCustom) {
+                    slide.classList.add('custom-pack');
+                    if (customPack?.image) {
+                        slide.innerHTML = `<img class="custom-pack-preview" src="${customPack.image}" alt="${customPack.name || 'Custom Pack'}">`;
+                    } else {
+                        slide.innerHTML = `
+                            <div class="custom-pack-content">
+                                <div class="plus-icon">+</div>
+                                <span>Create Pack</span>
+                            </div>
+                        `;
                     }
-                    break;
-                case 'connected':
-                    statusText.textContent = 'Connected';
-                    partnerInfo.textContent = 'Ready when you are';
-                    break;
-                case 'disconnected':
-                    dot.classList.add('disconnected');
-                    statusText.textContent = 'Not Connected';
-                    partnerInfo.textContent = 'Firebase setup required';
-                    break;
+                    slide.onclick = () => {
+                        if (index === currentPackIndex) {
+                            showCustomPackModal();
+                        } else {
+                            goToSlide(index);
+                        }
+                    };
+                } else {
+                    // Create CSS-styled pack
+                    slide.style.background = `linear-gradient(135deg, ${pack.colors[0]}, ${pack.colors[1]})`;
+                    slide.style.display = 'flex';
+                    slide.style.flexDirection = 'column';
+                    slide.style.alignItems = 'center';
+                    slide.style.justifyContent = 'center';
+                    slide.style.padding = '20px';
+                    slide.style.position = 'relative';
+                    slide.style.overflow = 'hidden';
+
+                    let packHTML = '';
+
+                    // Add chevron for Marlboro
+                    if (pack.chevron) {
+                        packHTML += `<div style="position:absolute;top:0;left:0;right:0;height:60%;background:linear-gradient(180deg, #fff 0%, #fff 40%, transparent 40%);clip-path:polygon(0 0, 100% 0, 100% 70%, 50% 100%, 0 70%);"></div>`;
+                    }
+
+                    packHTML += `
+                        <div style="position:relative;z-index:1;text-align:center;">
+                            <div style="font-size:${pack.logo.length > 10 ? '0.9rem' : '1.1rem'};font-weight:bold;color:${pack.textColor};letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;text-shadow:1px 1px 2px rgba(0,0,0,0.3);">${pack.logo}</div>
+                            ${pack.accent ? `<div style="font-size:0.7rem;color:${pack.textColor};opacity:0.9;letter-spacing:1px;">${pack.accent}</div>` : ''}
+                        </div>
+                    `;
+
+                    slide.innerHTML = packHTML;
+                    slide.onclick = () => {
+                        if (index !== currentPackIndex) {
+                            goToSlide(index);
+                        }
+                    };
+                }
+
+                inner.appendChild(slide);
+
+                // Create dot
+                const dot = document.createElement('div');
+                dot.className = `carousel-dot ${index === currentPackIndex ? 'active' : ''}`;
+                dot.onclick = () => goToSlide(index);
+                dots.appendChild(dot);
+            });
+
+            updatePackLabel();
+            updateCarouselPosition();
+        }
+
+        function goToSlide(index) {
+            currentPackIndex = index;
+
+            // Update active states
+            document.querySelectorAll('.pack-slide').forEach((slide, i) => {
+                slide.classList.toggle('active', i === index);
+            });
+
+            document.querySelectorAll('.carousel-dot').forEach((dot, i) => {
+                dot.classList.toggle('active', i === index);
+            });
+
+            updatePackLabel();
+            updateCarouselPosition();
+
+            // Save selected pack to Firebase
+            if (currentUser && PACKS[index]) {
+                db.ref(`users/${currentUser.uid}/pack`).set(PACKS[index].id);
             }
         }
 
-        function updateRoomCode() {
-            document.getElementById('codeText').textContent = roomId;
+        function updateCarouselPosition() {
+            const inner = document.getElementById('carouselInner');
+            const slideWidth = 220; // 200px + 20px gap
+            const offset = -currentPackIndex * slideWidth;
+            inner.style.transform = `translateX(${offset}px)`;
+        }
+
+        function updatePackLabel() {
+            const pack = PACKS[currentPackIndex];
+            const customPack = userData?.customPack;
+
+            if (pack.isCustom && customPack?.name) {
+                document.getElementById('currentPackName').textContent = customPack.name;
+                document.getElementById('currentPackDesc').textContent = 'Your custom pack';
+            } else {
+                document.getElementById('currentPackName').textContent = pack.name;
+                document.getElementById('currentPackDesc').textContent = pack.desc;
+            }
+        }
+
+        // Custom Pack Creator
+        let drawingColor = '#ffffff';
+        let isDrawing = false;
+        let ctx = null;
+
+        function showCustomPackModal() {
+            document.getElementById('customPackModal').classList.add('active');
+            initDrawCanvas();
+        }
+
+        function initDrawCanvas() {
+            const canvas = document.getElementById('drawCanvas');
+            const container = canvas.parentElement;
+
+            // Set canvas size
+            canvas.width = container.offsetWidth;
+            canvas.height = container.offsetHeight;
+
+            ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#111';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = drawingColor;
+            ctx.lineWidth = 4;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            // Touch events
+            canvas.addEventListener('touchstart', startDrawing, { passive: false });
+            canvas.addEventListener('touchmove', draw, { passive: false });
+            canvas.addEventListener('touchend', stopDrawing);
+
+            // Mouse events
+            canvas.addEventListener('mousedown', startDrawing);
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('mouseup', stopDrawing);
+            canvas.addEventListener('mouseleave', stopDrawing);
+        }
+
+        function startDrawing(e) {
+            e.preventDefault();
+            isDrawing = true;
+            const pos = getCanvasPos(e);
+            ctx.beginPath();
+            ctx.moveTo(pos.x, pos.y);
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            e.preventDefault();
+            const pos = getCanvasPos(e);
+            ctx.lineTo(pos.x, pos.y);
+            ctx.stroke();
+        }
+
+        function stopDrawing() {
+            isDrawing = false;
+        }
+
+        function getCanvasPos(e) {
+            const canvas = document.getElementById('drawCanvas');
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return {
+                x: (clientX - rect.left) * (canvas.width / rect.width),
+                y: (clientY - rect.top) * (canvas.height / rect.height)
+            };
+        }
+
+        // Tab switching
+        document.querySelectorAll('.creator-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.creator-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+
+                const tabId = tab.dataset.tab;
+                document.getElementById('uploadTab').style.display = tabId === 'upload' ? 'block' : 'none';
+                document.getElementById('drawTab').style.display = tabId === 'draw' ? 'block' : 'none';
+
+                if (tabId === 'draw') {
+                    setTimeout(initDrawCanvas, 100);
+                }
+            });
+        });
+
+        // Color picker
+        document.querySelectorAll('.color-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                drawingColor = btn.dataset.color;
+                if (ctx) ctx.strokeStyle = drawingColor;
+            });
+        });
+
+        // Clear canvas
+        document.getElementById('clearCanvasBtn')?.addEventListener('click', () => {
+            if (ctx) {
+                const canvas = document.getElementById('drawCanvas');
+                ctx.fillStyle = '#111';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+        });
+
+        // Image upload
+        document.getElementById('uploadArea')?.addEventListener('click', () => {
+            document.getElementById('packImageInput').click();
+        });
+
+        document.getElementById('packImageInput')?.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    customPackImage = e.target.result;
+                    const uploadArea = document.getElementById('uploadArea');
+                    uploadArea.classList.add('has-image');
+                    uploadArea.innerHTML = `<img class="upload-preview" src="${customPackImage}" alt="Preview">`;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        async function saveCustomPack() {
+            const name = document.getElementById('customPackName').value.trim() || 'My Pack';
+            let imageData = customPackImage;
+
+            // If using draw tab, get canvas data
+            const activeTab = document.querySelector('.creator-tab.active').dataset.tab;
+            if (activeTab === 'draw') {
+                const canvas = document.getElementById('drawCanvas');
+                imageData = canvas.toDataURL('image/png');
+            }
+
+            if (!imageData) {
+                showToast('Please add an image or draw something');
+                return;
+            }
+
+            // Save to user data
+            await db.ref(`users/${currentUser.uid}/customPack`).set({
+                name: name,
+                image: imageData,
+                createdAt: Date.now()
+            });
+
+            userData.customPack = { name, image: imageData };
+
+            closeModal('customPackModal');
+            renderPackSlides();
+
+            // Switch to custom pack
+            const customIndex = PACKS.findIndex(p => p.isCustom);
+            if (customIndex !== -1) {
+                goToSlide(customIndex);
+            }
+
+            showToast('Pack saved!');
+        }
+
+        // Generate 6-char friend code from UID
+        function generateFriendCode(uid) {
+            let hash = 0;
+            for (let i = 0; i < uid.length; i++) {
+                const char = uid.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash;
+            }
+            return Math.abs(hash).toString(36).substring(0, 6).toUpperCase();
+        }
+
+        // Auth State Listener
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                currentUser = user;
+                await initializeUser();
+                showScreen('homeScreen');
+                initCarousel();
+                loadFriends();
+                listenForRequests();
+            } else {
+                showScreen('authScreen');
+            }
+        });
+
+        // Google Sign In
+        document.getElementById('googleSignIn').addEventListener('click', async () => {
+            try {
+                const provider = new firebase.auth.GoogleAuthProvider();
+                await auth.signInWithPopup(provider);
+            } catch (error) {
+                console.error('Sign in error:', error);
+                showToast('Sign in failed. Try again.');
+            }
+        });
+
+        // Initialize user data in Firebase
+        async function initializeUser() {
+            const userRef = db.ref(`users/${currentUser.uid}`);
+            const snapshot = await userRef.once('value');
+
+            if (!snapshot.exists()) {
+                userData = {
+                    name: currentUser.displayName || 'Smoker',
+                    photo: currentUser.photoURL || null,
+                    friendCode: generateFriendCode(currentUser.uid),
+                    pack: 'american-spirit-turquoise',
+                    cigarettesLeft: 20,
+                    totalSmoked: 0,
+                    createdAt: Date.now()
+                };
+                await userRef.set(userData);
+            } else {
+                userData = snapshot.val();
+            }
+
+            // Find pack index
+            const packIndex = PACKS.findIndex(p => p.id === userData.pack);
+            if (packIndex !== -1) {
+                currentPackIndex = packIndex;
+            }
+
+            updateUserDisplay();
+
+            // Set presence
+            const presenceRef = db.ref(`presence/${currentUser.uid}`);
+            presenceRef.set(true);
+            presenceRef.onDisconnect().set(false);
+        }
+
+        function updateUserDisplay() {
+            document.getElementById('userName').textContent = userData.name;
+            document.getElementById('yourCode').textContent = userData.friendCode;
+
+            const avatar = document.getElementById('userAvatar');
+            if (userData.photo) {
+                avatar.innerHTML = `<img src="${userData.photo}" alt="avatar">`;
+            } else {
+                avatar.textContent = userData.name.charAt(0).toUpperCase();
+            }
+        }
+
+        // Screen Management
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        // Smoke button
+        document.getElementById('smokeBtn').addEventListener('click', () => {
+            startSoloSmoke();
+        });
+
+        function startSoloSmoke() {
+            document.getElementById('partnerName').textContent = 'Solo smoke';
+            showScreen('smokingScreen');
+            startTimer(5 * 60);
+            decrementCigarette();
+        }
+
+        // Friends System
+        async function loadFriends() {
+            const friendsRef = db.ref(`users/${currentUser.uid}/friends`);
+            friendsRef.on('value', async (snapshot) => {
+                friends = snapshot.val() || {};
+                await renderFriendsList();
+            });
+        }
+
+        async function renderFriendsList() {
+            const list = document.getElementById('friendsList');
+            const friendIds = Object.keys(friends);
+
+            if (friendIds.length === 0) {
+                list.innerHTML = `
+                    <div class="no-friends">
+                        No smoke buddies yet.<br>
+                        Add friends to smoke together!
+                    </div>
+                `;
+                return;
+            }
+
+            list.innerHTML = '';
+
+            for (const friendId of friendIds) {
+                const friendSnap = await db.ref(`users/${friendId}`).once('value');
+                const friendData = friendSnap.val();
+                if (!friendData) continue;
+
+                const presenceSnap = await db.ref(`presence/${friendId}`).once('value');
+                const isOnline = presenceSnap.val() === true;
+
+                const sharedCount = friends[friendId]?.sharedSmokes || 0;
+
+                const item = document.createElement('div');
+                item.className = 'friend-item';
+                item.innerHTML = `
+                    <div class="friend-avatar">
+                        ${friendData.photo ? `<img src="${friendData.photo}" alt="">` : friendData.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div class="friend-info">
+                        <div class="friend-name">${friendData.name}</div>
+                        <div class="friend-stats">${sharedCount} shared smokes</div>
+                    </div>
+                    <div class="friend-status ${isOnline ? '' : 'offline'}"></div>
+                `;
+                item.onclick = () => showSmokeRequestModal(friendId, friendData);
+                list.appendChild(item);
+            }
+        }
+
+        // Add Friend
+        function showAddFriendModal() {
+            document.getElementById('friendCodeInput').value = '';
+            document.getElementById('addFriendModal').classList.add('active');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        async function addFriend() {
+            const code = document.getElementById('friendCodeInput').value.toUpperCase().trim();
+
+            if (code.length !== 6) {
+                showToast('Enter a 6-character code');
+                return;
+            }
+
+            if (code === userData.friendCode) {
+                showToast("That's your own code!");
+                return;
+            }
+
+            const usersSnap = await db.ref('users').orderByChild('friendCode').equalTo(code).once('value');
+            const users = usersSnap.val();
+
+            if (!users) {
+                showToast('No user found with that code');
+                return;
+            }
+
+            const friendId = Object.keys(users)[0];
+            const friendData = users[friendId];
+
+            if (friends[friendId]) {
+                showToast('Already friends!');
+                closeModal('addFriendModal');
+                return;
+            }
+
+            await db.ref(`users/${currentUser.uid}/friends/${friendId}`).set({
+                addedAt: Date.now(),
+                sharedSmokes: 0
+            });
+
+            await db.ref(`users/${friendId}/friends/${currentUser.uid}`).set({
+                addedAt: Date.now(),
+                sharedSmokes: 0
+            });
+
+            closeModal('addFriendModal');
+            showToast(`Added ${friendData.name}!`);
+        }
+
+        // Smoke Request System
+        function showSmokeRequestModal(friendId, friendData) {
+            selectedFriendForRequest = { id: friendId, data: friendData };
+
+            document.getElementById('requestFriendName').textContent = friendData.name;
+            const avatar = document.getElementById('requestFriendAvatar');
+            if (friendData.photo) {
+                avatar.innerHTML = `<img src="${friendData.photo}" alt="">`;
+            } else {
+                avatar.textContent = friendData.name.charAt(0).toUpperCase();
+            }
+
+            document.getElementById('smokeRequestModal').classList.add('active');
+        }
+
+        async function sendSmokeRequest() {
+            if (!selectedFriendForRequest) return;
+
+            const requestRef = db.ref(`requests/${selectedFriendForRequest.id}/${currentUser.uid}`);
+            await requestRef.set({
+                from: currentUser.uid,
+                fromName: userData.name,
+                fromPhoto: userData.photo,
+                timestamp: Date.now(),
+                status: 'pending'
+            });
+
+            closeModal('smokeRequestModal');
+            showToast('Smoke request sent!');
+
+            requestRef.on('value', (snap) => {
+                const request = snap.val();
+                if (request && request.status === 'accepted') {
+                    requestRef.off();
+                    startSharedSession(selectedFriendForRequest.id, selectedFriendForRequest.data);
+                } else if (request && request.status === 'declined') {
+                    requestRef.off();
+                    showToast('Request declined');
+                }
+            });
+        }
+
+        function listenForRequests() {
+            const myRequestsRef = db.ref(`requests/${currentUser.uid}`);
+            myRequestsRef.on('child_added', async (snap) => {
+                const request = snap.val();
+                if (request.status === 'pending') {
+                    currentRequest = { id: snap.key, ...request };
+                    showIncomingRequest(request);
+                }
+            });
+        }
+
+        function showIncomingRequest(request) {
+            document.getElementById('requesterName').textContent = request.fromName;
+            const avatar = document.getElementById('requesterAvatar');
+            if (request.fromPhoto) {
+                avatar.innerHTML = `<img src="${request.fromPhoto}" alt="">`;
+            } else {
+                avatar.textContent = request.fromName.charAt(0).toUpperCase();
+            }
+            showScreen('requestScreen');
+        }
+
+        async function acceptRequest() {
+            if (!currentRequest) return;
+
+            await db.ref(`requests/${currentUser.uid}/${currentRequest.id}/status`).set('accepted');
+
+            const friendSnap = await db.ref(`users/${currentRequest.id}`).once('value');
+            const friendData = friendSnap.val();
+
+            await db.ref(`requests/${currentUser.uid}/${currentRequest.id}`).remove();
+
+            startSharedSession(currentRequest.id, friendData);
+            currentRequest = null;
+        }
+
+        async function declineRequest() {
+            if (!currentRequest) return;
+
+            await db.ref(`requests/${currentUser.uid}/${currentRequest.id}/status`).set('declined');
+            await db.ref(`requests/${currentUser.uid}/${currentRequest.id}`).remove();
+            currentRequest = null;
+            showScreen('homeScreen');
+        }
+
+        async function startSharedSession(friendId, friendData) {
+            const sessionId = [currentUser.uid, friendId].sort().join('_');
+            smokingSessionRef = db.ref(`sessions/${sessionId}`);
+
+            const sessionSnap = await smokingSessionRef.once('value');
+            if (!sessionSnap.exists()) {
+                await smokingSessionRef.set({
+                    startTime: Date.now(),
+                    duration: 5 * 60 * 1000,
+                    participants: {
+                        [currentUser.uid]: true,
+                        [friendId]: true
+                    }
+                });
+            }
+
+            const myFriendRef = db.ref(`users/${currentUser.uid}/friends/${friendId}/sharedSmokes`);
+            const theirFriendRef = db.ref(`users/${friendId}/friends/${currentUser.uid}/sharedSmokes`);
+
+            myFriendRef.transaction(count => (count || 0) + 1);
+            theirFriendRef.transaction(count => (count || 0) + 1);
+
+            document.getElementById('partnerName').textContent = friendData.name;
+            showScreen('smokingScreen');
+
+            smokingSessionRef.child('startTime').on('value', (snap) => {
+                const startTime = snap.val();
+                if (startTime) {
+                    const elapsed = Date.now() - startTime;
+                    const remaining = Math.max(0, 5 * 60 - Math.floor(elapsed / 1000));
+                    startTimer(remaining);
+                }
+            });
+
+            decrementCigarette();
+        }
+
+        function startTimer(seconds) {
+            if (timerInterval) clearInterval(timerInterval);
+
+            let remaining = seconds;
+            updateTimerDisplay(remaining);
+            updateBurnProgress(1 - remaining / (5 * 60));
+
+            timerInterval = setInterval(() => {
+                remaining--;
+                updateTimerDisplay(remaining);
+                updateBurnProgress(1 - remaining / (5 * 60));
+
+                if (remaining <= 0) {
+                    clearInterval(timerInterval);
+                    showToast('Smoke session complete!');
+                    setTimeout(() => {
+                        endSession();
+                    }, 2000);
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            document.getElementById('timerValue').textContent =
+                `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function updateBurnProgress(progress) {
+            const maxBurn = 200;
+            document.getElementById('burnArea').style.width = `${progress * maxBurn}px`;
+        }
+
+        async function decrementCigarette() {
+            userData.cigarettesLeft = Math.max(0, userData.cigarettesLeft - 1);
+            userData.totalSmoked = (userData.totalSmoked || 0) + 1;
+
+            await db.ref(`users/${currentUser.uid}`).update({
+                cigarettesLeft: userData.cigarettesLeft,
+                totalSmoked: userData.totalSmoked
+            });
+        }
+
+        function endSession() {
+            if (timerInterval) clearInterval(timerInterval);
+            if (smokingSessionRef) {
+                smokingSessionRef.off();
+                smokingSessionRef = null;
+            }
+
+            document.getElementById('burnArea').style.width = '0px';
+            showScreen('homeScreen');
         }
 
         function copyCode() {
-            const url = window.location.href;
-
-            if (navigator.share) {
-                navigator.share({
-                    title: 'Smoke With Me',
-                    text: 'Join me for a smoke break',
-                    url: url
-                }).catch(() => {
-                    copyToClipboard(url);
-                });
-            } else {
-                copyToClipboard(url);
-            }
-        }
-
-        function copyToClipboard(text) {
-            navigator.clipboard.writeText(text).then(() => {
-                showToast('Link copied! Send it to your person.');
-            }).catch(() => {
-                showToast('Tap and hold to copy the link');
+            navigator.clipboard.writeText(userData.friendCode).then(() => {
+                showToast('Friend code copied!');
             });
         }
 
@@ -734,28 +1971,13 @@
             const toast = document.getElementById('toast');
             toast.textContent = message;
             toast.classList.add('show');
-            setTimeout(() => {
-                toast.classList.remove('show');
-            }, 3000);
+            setTimeout(() => toast.classList.remove('show'), 3000);
         }
 
-        // Event listeners
-        document.getElementById('startBtn').addEventListener('click', startSmoking);
-        document.getElementById('resetBtn').addEventListener('click', reset);
-
-        // Initialize
-        initFirebase();
-
-        // Cleanup on page unload
-        window.addEventListener('beforeunload', () => {
-            if (animationFrame) cancelAnimationFrame(animationFrame);
-        });
-
-        // Prevent pull-to-refresh on mobile
-        document.body.addEventListener('touchmove', (e) => {
-            if (e.touches.length > 1) return;
-            e.preventDefault();
-        }, { passive: false });
+        // Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(() => {});
+        }
     </script>
 </body>
 </html>
