@@ -931,161 +931,6 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
-
-        /* Ash particles */
-        .ash-particle {
-            position: absolute;
-            width: 4px;
-            height: 4px;
-            background: #666;
-            border-radius: 50%;
-            pointer-events: none;
-            z-index: 10;
-        }
-
-        /* Breathing indicator */
-        .breath-indicator {
-            position: absolute;
-            bottom: -40px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 0.75rem;
-            color: #ff6b00;
-            opacity: 0;
-            transition: opacity 0.3s;
-            white-space: nowrap;
-        }
-
-        .breath-indicator.active {
-            opacity: 1;
-            animation: breath-pulse 0.5s ease-in-out infinite;
-        }
-
-        @keyframes breath-pulse {
-            0%, 100% { opacity: 0.6; }
-            50% { opacity: 1; }
-        }
-
-        /* Cigarette drop animation */
-        @keyframes cig-drop {
-            0% {
-                transform: rotate(-5deg) translateY(0);
-                opacity: 1;
-            }
-            30% {
-                transform: rotate(15deg) translateY(20px);
-            }
-            100% {
-                transform: rotate(90deg) translateY(300px);
-                opacity: 0;
-            }
-        }
-
-        .cigarette-solo.dropping {
-            animation: cig-drop 1.2s ease-in forwards;
-        }
-
-        /* Ember inhale effect */
-        .cigarette-solo .ember.inhaling {
-            transform: translateY(-50%) scale(1.8);
-            box-shadow: 0 0 50px #ff6b00, 0 0 100px rgba(255, 100, 0, 0.9);
-            background: radial-gradient(circle, #ffaa00 0%, #ff6b00 50%, transparent 70%);
-        }
-
-        /* iPad & Tablet Responsive */
-        @media (min-width: 768px) {
-            .screen {
-                max-width: 600px;
-                margin: 0 auto;
-            }
-
-            .pack-carousel-section {
-                min-height: 450px;
-            }
-
-            .pack-slide {
-                width: 250px;
-                height: 375px;
-            }
-
-            .pack-carousel-inner {
-                padding: 0 calc(50% - 125px);
-            }
-
-            .cigarette-solo {
-                width: 340px;
-                height: 20px;
-            }
-
-            .cigarette-solo .filter {
-                width: 55px;
-            }
-
-            .cigarette-solo .ember {
-                width: 16px;
-                height: 16px;
-            }
-
-            .timer-value {
-                font-size: 4rem;
-            }
-
-            .auth-title {
-                font-size: 2.5rem;
-            }
-
-            .auth-logo {
-                font-size: 5rem;
-            }
-
-            .friends-section {
-                max-height: none;
-            }
-
-            .friends-list {
-                max-height: 250px;
-            }
-
-            .modal {
-                max-width: 440px;
-            }
-
-            #customPackModal .modal {
-                max-width: 480px;
-            }
-
-            .home-header {
-                padding: 0.5rem 0;
-            }
-        }
-
-        /* iPad landscape */
-        @media (min-width: 1024px) {
-            .screen {
-                max-width: 700px;
-            }
-
-            #homeScreen {
-                display: grid;
-                grid-template-columns: 1fr;
-                gap: 1.5rem;
-            }
-
-            .pack-slide {
-                width: 280px;
-                height: 420px;
-            }
-
-            .pack-carousel-inner {
-                padding: 0 calc(50% - 140px);
-                gap: 30px;
-            }
-
-            .cigarette-solo {
-                width: 400px;
-                height: 22px;
-            }
-        }
     </style>
 </head>
 <body>
@@ -1163,22 +1008,21 @@
         </div>
 
         <div class="smoking-main">
-            <div class="cigarette-solo" id="cigaretteSolo">
+            <div class="cigarette-solo">
                 <div class="filter"></div>
                 <div class="burn-area" id="burnArea">
-                    <div class="ember" id="emberEl"></div>
+                    <div class="ember"></div>
                     <div class="smoke-wisps">
                         <div class="smoke-wisp"></div>
                         <div class="smoke-wisp"></div>
                         <div class="smoke-wisp"></div>
                     </div>
                 </div>
-                <div class="breath-indicator" id="breathIndicator">breathing in...</div>
             </div>
 
             <div class="timer-display">
                 <div class="timer-value" id="timerValue">5:00</div>
-                <div class="timer-label" id="timerLabel">time remaining</div>
+                <div class="timer-label">time remaining</div>
             </div>
         </div>
 
@@ -1554,11 +1398,7 @@
 
         function updateCarouselPosition() {
             const inner = document.getElementById('carouselInner');
-            // Responsive slide width
-            const vw = window.innerWidth;
-            let slideWidth = 220; // 200 + 20 gap
-            if (vw >= 1024) slideWidth = 310; // 280 + 30
-            else if (vw >= 768) slideWidth = 270; // 250 + 20
+            const slideWidth = 220; // 200px + 20px gap
             const offset = -currentPackIndex * slideWidth;
             inner.style.transform = `translateX(${offset}px)`;
         }
@@ -2066,84 +1906,26 @@
             decrementCigarette();
         }
 
-        // ===== ENHANCED SMOKING ENGINE =====
-        let totalDuration = 5 * 60; // seconds
-        let burnProgress = 0; // 0 to 1
-        let breathBoost = 0; // extra burn from breathing
-        let isInhaling = false;
-        let audioContext = null;
-        let micStream = null;
-        let analyser = null;
-        let breathCheckInterval = null;
-        let ashAccumulated = 0; // 0 to 1, triggers visual ash
-
         function startTimer(seconds) {
             if (timerInterval) clearInterval(timerInterval);
 
-            totalDuration = 5 * 60;
             let remaining = seconds;
-            burnProgress = 1 - remaining / totalDuration;
-            ashAccumulated = 0;
-            breathBoost = 0;
-
             updateTimerDisplay(remaining);
-            updateBurnProgress(burnProgress);
-            startBreathDetection();
+            updateBurnProgress(1 - remaining / (5 * 60));
 
             timerInterval = setInterval(() => {
-                // Normal burn + breath boost
-                const burnRate = 1 + (isInhaling ? 3 : 0); // 4x faster when inhaling
-                remaining = Math.max(0, remaining - burnRate);
-                burnProgress = 1 - remaining / totalDuration;
-                ashAccumulated = Math.min(1, ashAccumulated + 0.004);
-
-                updateTimerDisplay(Math.ceil(remaining));
-                updateBurnProgress(burnProgress);
-
-                // Ember inhale effect
-                const ember = document.getElementById('emberEl');
-                if (ember) {
-                    if (isInhaling) {
-                        ember.classList.add('inhaling');
-                    } else {
-                        ember.classList.remove('inhaling');
-                    }
-                }
+                remaining--;
+                updateTimerDisplay(remaining);
+                updateBurnProgress(1 - remaining / (5 * 60));
 
                 if (remaining <= 0) {
                     clearInterval(timerInterval);
-                    stopBreathDetection();
-                    finishSmoke();
+                    showToast('Smoke session complete!');
+                    setTimeout(() => {
+                        endSession();
+                    }, 2000);
                 }
             }, 1000);
-        }
-
-        function finishSmoke() {
-            // Burn fully to filter
-            const burnArea = document.getElementById('burnArea');
-            const cig = document.getElementById('cigaretteSolo');
-            const cigWidth = cig ? cig.offsetWidth : 240;
-            const filterWidth = cig ? cig.querySelector('.filter').offsetWidth : 40;
-            burnArea.style.transition = 'width 1s ease-in';
-            burnArea.style.width = `${cigWidth - filterWidth}px`;
-
-            document.getElementById('timerValue').textContent = '0:00';
-            document.getElementById('timerLabel').textContent = 'finished';
-
-            // Drop animation after burn completes
-            setTimeout(() => {
-                if (cig) {
-                    cig.classList.add('dropping');
-                    // Haptic on drop
-                    triggerHaptic('heavy');
-                }
-
-                // Return to home after drop
-                setTimeout(() => {
-                    showToast('Smoke session complete!');
-                    endSession();
-                }, 1500);
-            }, 1200);
         }
 
         function updateTimerDisplay(seconds) {
@@ -2154,155 +1936,8 @@
         }
 
         function updateBurnProgress(progress) {
-            const cig = document.getElementById('cigaretteSolo');
-            const cigWidth = cig ? cig.offsetWidth : 240;
-            const filterWidth = cig ? cig.querySelector('.filter').offsetWidth : 40;
-            const maxBurn = cigWidth - filterWidth;
-            document.getElementById('burnArea').style.width = `${Math.min(progress, 1) * maxBurn}px`;
-        }
-
-        // ===== HAPTIC FEEDBACK & ASH SHAKE =====
-        function triggerHaptic(intensity = 'medium') {
-            if (!navigator.vibrate) return;
-            switch (intensity) {
-                case 'light': navigator.vibrate(10); break;
-                case 'medium': navigator.vibrate(30); break;
-                case 'heavy': navigator.vibrate([50, 30, 80]); break;
-            }
-        }
-
-        function handleShake(e) {
-            if (!document.getElementById('smokingScreen').classList.contains('active')) return;
-
-            const acc = e.accelerationIncludingGravity || e.acceleration;
-            if (!acc) return;
-
-            const force = Math.sqrt(acc.x * acc.x + acc.y * acc.y + acc.z * acc.z);
-
-            if (force > 20 && ashAccumulated > 0.15) {
-                shakeAshOff();
-            }
-        }
-
-        function shakeAshOff() {
-            const cig = document.getElementById('cigaretteSolo');
-            if (!cig || ashAccumulated < 0.15) return;
-
-            triggerHaptic('light');
-
-            // Spawn ash particles falling
-            const burnArea = document.getElementById('burnArea');
-            const rect = burnArea.getBoundingClientRect();
-
-            for (let i = 0; i < 8; i++) {
-                const particle = document.createElement('div');
-                particle.className = 'ash-particle';
-                particle.style.left = `${rect.left + Math.random() * rect.width}px`;
-                particle.style.top = `${rect.top + rect.height / 2}px`;
-                particle.style.position = 'fixed';
-                document.body.appendChild(particle);
-
-                const dx = (Math.random() - 0.5) * 40;
-                const dy = Math.random() * 80 + 40;
-                const duration = 600 + Math.random() * 400;
-
-                particle.animate([
-                    { transform: 'translate(0, 0) scale(1)', opacity: 1 },
-                    { transform: `translate(${dx}px, ${dy}px) scale(0.3)`, opacity: 0 }
-                ], { duration, easing: 'ease-in' });
-
-                setTimeout(() => particle.remove(), duration);
-            }
-
-            ashAccumulated = 0;
-        }
-
-        // Also allow tap on cigarette to shake ash
-        document.getElementById('cigaretteSolo')?.addEventListener('click', () => {
-            if (ashAccumulated > 0.1) shakeAshOff();
-        });
-
-        // Listen for device motion (shake)
-        if (window.DeviceMotionEvent) {
-            // iOS 13+ requires permission
-            if (typeof DeviceMotionEvent.requestPermission === 'function') {
-                // Will request on first smoke session
-            } else {
-                window.addEventListener('devicemotion', handleShake);
-            }
-        }
-
-        // ===== BREATH / MIC DETECTION =====
-        async function startBreathDetection() {
-            try {
-                // Request device motion permission on iOS
-                if (typeof DeviceMotionEvent.requestPermission === 'function') {
-                    try {
-                        const perm = await DeviceMotionEvent.requestPermission();
-                        if (perm === 'granted') {
-                            window.addEventListener('devicemotion', handleShake);
-                        }
-                    } catch (e) {}
-                }
-
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                const source = audioContext.createMediaStreamSource(micStream);
-                analyser = audioContext.createAnalyser();
-                analyser.fftSize = 256;
-                source.connect(analyser);
-
-                const dataArray = new Uint8Array(analyser.frequencyBinCount);
-                const indicator = document.getElementById('breathIndicator');
-
-                breathCheckInterval = setInterval(() => {
-                    if (!analyser) return;
-                    analyser.getByteFrequencyData(dataArray);
-
-                    // Check low-frequency energy (breathing is low freq)
-                    let lowFreqEnergy = 0;
-                    for (let i = 0; i < 10; i++) {
-                        lowFreqEnergy += dataArray[i];
-                    }
-                    lowFreqEnergy /= 10;
-
-                    // Threshold for "breathing in" detection
-                    const threshold = 80;
-                    const wasInhaling = isInhaling;
-                    isInhaling = lowFreqEnergy > threshold;
-
-                    if (indicator) {
-                        indicator.classList.toggle('active', isInhaling);
-                    }
-
-                    // Haptic pulse when starting to inhale
-                    if (isInhaling && !wasInhaling) {
-                        triggerHaptic('light');
-                    }
-                }, 100);
-            } catch (e) {
-                // Mic not available, breathing feature disabled silently
-                isInhaling = false;
-            }
-        }
-
-        function stopBreathDetection() {
-            isInhaling = false;
-            if (breathCheckInterval) {
-                clearInterval(breathCheckInterval);
-                breathCheckInterval = null;
-            }
-            if (micStream) {
-                micStream.getTracks().forEach(t => t.stop());
-                micStream = null;
-            }
-            if (audioContext) {
-                audioContext.close();
-                audioContext = null;
-            }
-            analyser = null;
-            const indicator = document.getElementById('breathIndicator');
-            if (indicator) indicator.classList.remove('active');
+            const maxBurn = 200;
+            document.getElementById('burnArea').style.width = `${progress * maxBurn}px`;
         }
 
         async function decrementCigarette() {
@@ -2317,24 +1952,12 @@
 
         function endSession() {
             if (timerInterval) clearInterval(timerInterval);
-            stopBreathDetection();
             if (smokingSessionRef) {
                 smokingSessionRef.off();
                 smokingSessionRef = null;
             }
 
-            // Reset cigarette state
-            const burnArea = document.getElementById('burnArea');
-            const cig = document.getElementById('cigaretteSolo');
-            burnArea.style.transition = '';
-            burnArea.style.width = '0px';
-            if (cig) cig.classList.remove('dropping');
-            document.getElementById('timerLabel').textContent = 'time remaining';
-
-            ashAccumulated = 0;
-            burnProgress = 0;
-            isInhaling = false;
-
+            document.getElementById('burnArea').style.width = '0px';
             showScreen('homeScreen');
         }
 
